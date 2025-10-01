@@ -1,0 +1,1 @@
+// Centralized type declarations for custom patches & missing libs// This file is picked up automatically by TypeScript via "typeRoots" in tsconfig.json/// <reference path="./jsonwebtoken.d.ts" />// You can add more patches here in the future like:// declare module "some-untyped-lib";

@@ -1,0 +1,41 @@
+{
+  "include": ["client/src/**/*", "shared/**/*", "vite.config.ts"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "server",
+    "tsconfig.server.json"
+  ],
+  "compilerOptions": {
+    // ✅ Client-side only (Vite handles transpilation, so no emit needed)
+    "noEmit": true,
+
+    // ✅ Vite requires modern module resolution
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+
+    // ✅ React/TS settings
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    // ✅ Interop + ergonomics
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+
+    // ✅ Paths for imports
+    "baseUrl": ".",
+    "types": [
+      "vite/client",
+      "node" // ensures server-shared code with Node types is OK
+    ],
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
+}

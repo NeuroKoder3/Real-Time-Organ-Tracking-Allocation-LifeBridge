@@ -1,0 +1,44 @@
+# ⚙️ Dependencies & build output
+node_modules/
+dist/
+build/
+.vite/
+
+# 🍏 macOS system files
+.DS_Store
+
+# 🖥️ Windows system files
+Thumbs.db
+
+# 🌐 Public build assets (server side output)
+server/public
+
+# ⚡ Vite configs (temporary / backups)
+vite.config.ts.*
+vite.config.js.*
+
+# 📦 Archives & logs
+*.tar.gz
+*.zip
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 🔐 Environment files (secrets)
+.env
+.env.*
+!.env.example   # Keep an example env for reference
+
+# 🐳 Docker
+docker-compose.override.yml
+.docker/
+*.pid
+
+# ✅ Netlify local folder
+.netlify
+
+# ✅ Coverage & test output
+coverage/
+jest-coverage/

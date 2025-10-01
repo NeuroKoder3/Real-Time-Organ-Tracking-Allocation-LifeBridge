@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- Mobile & scaling -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+
+    <!-- Primary title & description -->
+    <title>LifeBridge — Real-Time Organ Tracking & Allocation Platform</title>
+    <meta
+      name="description"
+      content="LifeBridge transforms organ transplantation from fragmented phone calls into a coordinated, data-driven system that maximizes the life-saving potential of every donated organ."
+    />
+
+    <!-- SEO & social metadata -->
+    <meta
+      property="og:title"
+      content="LifeBridge — Real-Time Organ Tracking & Allocation Platform"
+    />
+    <meta
+      property="og:description"
+      content="Real-time organ tracking & allocation system that improves coordination and maximizes life-saving outcomes."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="http://lifebridge.online" />
+    <meta
+      property="og:image"
+      content="http://lifebridge.online/lifebridge-preview.png"
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="LifeBridge — Real-Time Organ Tracking & Allocation Platform"
+    />
+    <meta
+      name="twitter:description"
+      content="A modern, data-driven solution for organ transplantation logistics and allocation."
+    />
+    <meta
+      name="twitter:image"
+      content="http://lifebridge.online/lifebridge-preview.png"
+    />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Inline critical styles -->
+    <style>
+      body {
+        margin: 0;
+        font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto,
+          "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+        background: #fff;
+        color: #222;
+      }
+      .hero {
+        max-width: 960px;
+        margin: 10vh auto;
+        padding: 0 24px;
+        text-align: center;
+      }
+      .title {
+        font-size: 2.25rem;
+        line-height: 1.2;
+        margin: 0 0 8px;
+      }
+      .subtitle {
+        font-size: 1.25rem;
+        color: #555;
+        margin: 0 0 16px;
+      }
+      .lead {
+        font-size: 1.05rem;
+        color: #333;
+        margin: 0;
+      }
+      @media (min-width: 768px) {
+        .title {
+          font-size: 3rem;
+        }
+        .subtitle {
+          font-size: 1.35rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ✅ Loading fallback (will disappear once React mounts) -->
+    <section class="hero" aria-labelledby="lifebridge-title" id="fallback-hero">
+      <h1 id="lifebridge-title" class="title">
+        LifeBridge — Real-Time Organ Tracking &amp; Allocation Platform
+      </h1>
+      <p class="subtitle">
+        A coordinated, data-driven system for transplantation logistics
+      </p>
+      <p class="lead">
+        Transform organ transplantation from fragmented phone calls into a
+        coordinated, technology-powered system that maximizes the life-saving
+        potential of every donated organ.
+      </p>
+    </section>
+
+    <!-- ✅ React app mounts here -->
+    <div id="root"></div>
+
+    <!-- Client app entry -->
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hide fallback hero once React is ready -->
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const observer = new MutationObserver(() => {
+          const root = document.getElementById("root");
+          if (root && root.children.length > 0) {
+            const fallback = document.getElementById("fallback-hero");
+            if (fallback) fallback.style.display = "none";
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.getElementById("root"), {
+          childList: true,
+        });
+      });
+    </script>
+  </body>
+</html>

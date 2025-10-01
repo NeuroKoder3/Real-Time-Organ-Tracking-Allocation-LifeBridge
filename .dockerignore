@@ -1,0 +1,39 @@
+# ======================================
+# Dependencies (reinstalled in image)
+# ======================================
+node_modules/
+.pnpm-store/
+pnpm-debug.log
+
+# ======================================
+# Local build artifacts (rebuilt inside Docker)
+# ======================================
+dist/
+# ✅ Covers both dist/server and dist/client
+
+# ======================================
+# Logs
+# ======================================
+logs/
+*.log
+
+# ======================================
+# Git and version control
+# ======================================
+.git/
+.gitignore
+
+# ======================================
+# Editor and IDE settings
+.vscode/
+.idea/
+
+# ======================================
+# Documentation (optional)
+*.md
+
+# ======================================
+# OS-generated files
+.DS_Store
+Thumbs.db
+

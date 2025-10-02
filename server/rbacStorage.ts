@@ -1,1 +1,416 @@
-// RBAC-enhanced storage layer wrapperimport type { IStorage } from "./storage.js";import { UserRole } from "../shared/schema.js";import {   hasPermission,   hasSpecialPermission,   filterFieldsByRole,  validateUpdateFields,  type EntityType } from "./permissions.js";export class RBACStorage implements IStorage {  constructor(    private storage: IStorage,    private userRole?: UserRole,    private userId?: string  ) {}  // Helper to check permission and throw if denied  private checkPermission(entity: EntityType, operation: 'create' | 'read' | 'update' | 'delete') {    if (!this.userRole) {      throw new Error('Authentication required');    }    if (!hasPermission(this.userRole, entity, operation)) {      throw new Error(`Permission denied: Cannot ${operation} ${entity} with role ${this.userRole}`);    }  }  // Helper to filter data based on field permissions  private filterFields<T extends Record<string, any>>(    data: T | T[],    entityType: EntityType  ): T | T[] {    if (Array.isArray(data)) {      return data.map(item => filterFieldsByRole(item, this.userRole, entityType) as T);    }    return filterFieldsByRole(data, this.userRole, entityType) as T;  }  // Helper to validate update fields  private validateUpdate(updates: Record<string, any>, entityType: EntityType) {    const validation = validateUpdateFields(updates, this.userRole, entityType);    if (!validation.valid) {      throw new Error(`Permission denied: Cannot update fields: ${validation.unauthorizedFields.join(', ')}`);    }  }  // Search operations - with field filtering  async searchRecipientsByName(firstName?: string, lastName?: string) {    this.checkPermission('recipients', 'read');    const results = await this.storage.searchRecipientsByName(firstName, lastName);    return this.filterFields(results, 'recipients') as any;  }  async searchDonorsByLocation(location: string) {    this.checkPermission('donors', 'read');    const results = await this.storage.searchDonorsByLocation(location);    return this.filterFields(results, 'donors') as any;  }  async searchRecipientsByLocation(location: string) {    this.checkPermission('recipients', 'read');    const results = await this.storage.searchRecipientsByLocation(location);    return this.filterFields(results, 'recipients') as any;  }  // User operations  async getUser(id: string) {    // Users can read their own profile, otherwise check permission    if (id !== this.userId) {      this.checkPermission('users', 'read');    }    return await this.storage.getUser(id);  }  async upsertUser(user: any) {    // Only admins can create/update users    if (user.id !== this.userId) {      this.checkPermission('users', user.id ? 'update' : 'create');    }    // Prevent non-admins from changing roles    if (user.role && this.userRole !== 'admin') {      throw new Error('Permission denied: Only admins can change user roles');    }    return await this.storage.upsertUser(user);  }  // Donor operations  async getDonors() {    this.checkPermission('donors', 'read');    const donors = await this.storage.getDonors();    return this.filterFields(donors, 'donors') as any;  }  async getDonor(id: string) {    this.checkPermission('donors', 'read');    const donor = await this.storage.getDonor(id);    return donor ? this.filterFields(donor, 'donors') as any : undefined;  }  async createDonor(donor: any) {    this.checkPermission('donors', 'create');    return await this.storage.createDonor(donor);  }  async updateDonor(id: string, updates: any) {    this.checkPermission('donors', 'update');    this.validateUpdate(updates, 'donors');    return await this.storage.updateDonor(id, updates);  }  // Recipient operations  async getRecipients() {    this.checkPermission('recipients', 'read');    const recipients = await this.storage.getRecipients();    return this.filterFields(recipients, 'recipients') as any;  }  async getRecipient(id: string) {    this.checkPermission('recipients', 'read');    const recipient = await this.storage.getRecipient(id);    return recipient ? this.filterFields(recipient, 'recipients') as any : undefined;  }  async getWaitingRecipients(organType: string) {    this.checkPermission('recipients', 'read');    const recipients = await this.storage.getWaitingRecipients(organType);    return this.filterFields(recipients, 'recipients') as any;  }  async createRecipient(recipient: any) {    this.checkPermission('recipients', 'create');    return await this.storage.createRecipient(recipient);  }  async updateRecipient(id: string, updates: any) {    this.checkPermission('recipients', 'update');        // Special case: Surgeons can only update medical data    if (this.userRole === 'surgeon') {      const allowedFields = ['medicalData', 'hlaType', 'antibodies', 'meldScore', 'cpcScore'];      const updateFields = Object.keys(updates);      const unauthorizedFields = updateFields.filter(field => !allowedFields.includes(field));            if (unauthorizedFields.length > 0) {        throw new Error(`Permission denied: Surgeons can only update medical data fields`);      }    } else {      this.validateUpdate(updates, 'recipients');    }        return await this.storage.updateRecipient(id, updates);  }  // Organ operations  async getOrgans() {    this.checkPermission('organs', 'read');    const organs = await this.storage.getOrgans();    return this.filterFields(organs, 'organs') as any;  }  async getOrgan(id: string) {    this.checkPermission('organs', 'read');    const organ = await this.storage.getOrgan(id);    return organ ? this.filterFields(organ, 'organs') as any : undefined;  }  async getAvailableOrgans() {    this.checkPermission('organs', 'read');    const organs = await this.storage.getAvailableOrgans();    return this.filterFields(organs, 'organs') as any;  }  async getOrgansByDonor(donorId: string) {    this.checkPermission('organs', 'read');    const organs = await this.storage.getOrgansByDonor(donorId);    return this.filterFields(organs, 'organs') as any;  }  async createOrgan(organ: any) {    this.checkPermission('organs', 'create');    return await this.storage.createOrgan(organ);  }  async updateOrgan(id: string, updates: any) {    this.checkPermission('organs', 'update');        // Special case: Surgeons can only update medical data    if (this.userRole === 'surgeon') {      const allowedFields = ['biopsyResults', 'crossmatchData', 'qualityScore', 'temperature'];      const updateFields = Object.keys(updates);      const unauthorizedFields = updateFields.filter(field => !allowedFields.includes(field));            if (unauthorizedFields.length > 0) {        throw new Error(`Permission denied: Surgeons can only update medical data fields`);      }    } else {      this.validateUpdate(updates, 'organs');    }        return await this.storage.updateOrgan(id, updates);  }  // Allocation operations  async getAllocations() {    this.checkPermission('allocations', 'read');    const allocations = await this.storage.getAllocations();    return this.filterFields(allocations, 'allocations') as any;  }  async getAllocation(id: string) {    this.checkPermission('allocations', 'read');    const allocation = await this.storage.getAllocation(id);    return allocation ? this.filterFields(allocation, 'allocations') as any : undefined;  }  async getAllocationsByOrgan(organId: string) {    this.checkPermission('allocations', 'read');    const allocations = await this.storage.getAllocationsByOrgan(organId);    return this.filterFields(allocations, 'allocations') as any;  }  async getAllocationsByRecipient(recipientId: string) {    this.checkPermission('allocations', 'read');    const allocations = await this.storage.getAllocationsByRecipient(recipientId);    return this.filterFields(allocations, 'allocations') as any;  }  async createAllocation(allocation: any) {    this.checkPermission('allocations', 'create');    return await this.storage.createAllocation(allocation);  }  async updateAllocation(id: string, updates: any) {    // Only admins and coordinators can update allocations    if (this.userRole !== 'admin' && this.userRole !== 'coordinator') {      throw new Error('Permission denied: Only admins and coordinators can update allocations');    }    this.checkPermission('allocations', 'update');    this.validateUpdate(updates, 'allocations');    return await this.storage.updateAllocation(id, updates);  }  // Transport operations  async getTransports() {    this.checkPermission('transports', 'read');    const transports = await this.storage.getTransports();    return this.filterFields(transports, 'transports') as any;  }  async getTransport(id: string) {    this.checkPermission('transports', 'read');    const transport = await this.storage.getTransport(id);    return transport ? this.filterFields(transport, 'transports') as any : undefined;  }  async getActiveTransports() {    this.checkPermission('transports', 'read');    const transports = await this.storage.getActiveTransports();    return this.filterFields(transports, 'transports') as any;  }  async createTransport(transport: any) {    this.checkPermission('transports', 'create');    return await this.storage.createTransport(transport);  }  async updateTransport(id: string, updates: any) {    this.checkPermission('transports', 'update');        // Transport role can only update specific fields    if (this.userRole === 'transport') {      const allowedFields = ['status', 'currentGpsLat', 'currentGpsLng', 'actualPickup', 'actualDelivery'];      const updateFields = Object.keys(updates);      const unauthorizedFields = updateFields.filter(field => !allowedFields.includes(field));            if (unauthorizedFields.length > 0) {        throw new Error(`Permission denied: Transport role can only update status and location fields`);      }    } else {      this.validateUpdate(updates, 'transports');    }        return await this.storage.updateTransport(id, updates);  }  // Message operations  async getMessages(allocationId?: string, transportId?: string) {    this.checkPermission('messages', 'read');    return await this.storage.getMessages(allocationId, transportId);  }  async createMessage(message: any) {    this.checkPermission('messages', 'create');    return await this.storage.createMessage(message);  }  async markMessageRead(id: string) {    this.checkPermission('messages', 'update');    return await this.storage.markMessageRead(id);  }  // Chain of custody operations  async getCustodyLogs(organId: string) {    this.checkPermission('custodyLogs', 'read');    const logs = await this.storage.getCustodyLogs(organId);    return this.filterFields(logs, 'custodyLogs') as any;  }  async addCustodyLog(log: any) {    this.checkPermission('custodyLogs', 'create');    return await this.storage.addCustodyLog(log);  }  // Metrics operations  async getMetrics(period?: string) {    this.checkPermission('metrics', 'read');    return await this.storage.getMetrics(period);  }  async addMetric(metric: any) {    this.checkPermission('metrics', 'create');    return await this.storage.addMetric(metric);  }  // Audit logging operations - HIPAA compliant  async createAuditLog(log: any) {    // Audit logs are created automatically, no permission check needed    return await this.storage.createAuditLog(log);  }  async createAuthAuditLog(log: any) {    // Auth audit logs are created automatically, no permission check needed    return await this.storage.createAuthAuditLog(log);  }  async getAuditLogs(filter?: any) {    // Only admins can view audit logs    if (!hasSpecialPermission(this.userRole, 'viewAuditLogs')) {      throw new Error('Permission denied: Only admins can view audit logs');    }    return await this.storage.getAuditLogs(filter);  }  async getAuthAuditLogs(filter?: any) {    // Only admins can view audit logs    if (!hasSpecialPermission(this.userRole, 'viewAuditLogs')) {      throw new Error('Permission denied: Only admins can view auth audit logs');    }    return await this.storage.getAuthAuditLogs(filter);  }}// Factory function to create RBAC-wrapped storageexport function createRBACStorage(  storage: IStorage,  userRole?: UserRole,  userId?: string): IStorage {  return new RBACStorage(storage, userRole, userId);}
+// server/rbacStorage.ts (RBAC-enhanced storage layer wrapper)
+
+import type { IStorage } from "./storage.js";
+import type { UserRole } from "../shared/schema.js";
+
+import {
+  hasPermission,
+  hasSpecialPermission,
+  filterFieldsByRole,
+  validateUpdateFields,
+  type EntityType,
+} from "./permissions.js";
+
+export class RBACStorage implements IStorage {
+  constructor(
+    private storage: IStorage,
+    private userRole?: UserRole,
+    private userId?: string
+  ) {}
+
+  // -- Helpers ---------------------------------------------------------------
+
+  // Check permission and throw if denied
+  private checkPermission(
+    entity: EntityType,
+    operation: "create" | "read" | "update" | "delete"
+  ) {
+    if (!this.userRole) {
+      throw new Error("Authentication required");
+    }
+    if (!hasPermission(this.userRole, entity, operation)) {
+      throw new Error(
+        `Permission denied: Cannot ${operation} ${entity} with role ${this.userRole}`
+      );
+    }
+  }
+
+  // Filter fields by role for a single record or an array
+  private filterFields<T extends Record<string, any>>(
+    data: T | T[],
+    entityType: EntityType
+  ): T | T[] {
+    if (Array.isArray(data)) {
+      return data.map(
+        (item) => filterFieldsByRole(item, this.userRole, entityType) as T
+      );
+    }
+    return filterFieldsByRole(data, this.userRole, entityType) as T;
+  }
+
+  // Validate update fields against role permissions
+  private validateUpdate(updates: Record<string, any>, entityType: EntityType) {
+    const validation = validateUpdateFields(updates, this.userRole, entityType);
+    if (!validation.valid) {
+      throw new Error(
+        `Permission denied: Cannot update fields: ${validation.unauthorizedFields.join(", ")}`
+      );
+    }
+  }
+
+  // -- Search ---------------------------------------------------------------
+
+  async searchRecipientsByName(firstName?: string, lastName?: string) {
+    this.checkPermission("recipients", "read");
+    const results = await this.storage.searchRecipientsByName(firstName, lastName);
+    return this.filterFields(results, "recipients") as any;
+  }
+
+  async searchDonorsByLocation(location: string) {
+    this.checkPermission("donors", "read");
+    const results = await this.storage.searchDonorsByLocation(location);
+    return this.filterFields(results, "donors") as any;
+  }
+
+  async searchRecipientsByLocation(location: string) {
+    this.checkPermission("recipients", "read");
+    const results = await this.storage.searchRecipientsByLocation(location);
+    return this.filterFields(results, "recipients") as any;
+  }
+
+  // -- Users ----------------------------------------------------------------
+
+  async getUser(id: string) {
+    // Users can read their own profile, otherwise check permission
+    if (id !== this.userId) {
+      this.checkPermission("users", "read");
+    }
+    return await this.storage.getUser(id);
+  }
+
+  async upsertUser(user: any) {
+    // Only admins can create/update users (unless updating yourself)
+    if (user.id !== this.userId) {
+      this.checkPermission("users", user.id ? "update" : "create");
+    }
+    // Prevent non-admins from changing roles
+    if (user.role && this.userRole !== "admin") {
+      throw new Error("Permission denied: Only admins can change user roles");
+    }
+    return await this.storage.upsertUser(user);
+  }
+
+  // -- Donors ---------------------------------------------------------------
+
+  async getDonors() {
+    this.checkPermission("donors", "read");
+    const donors = await this.storage.getDonors();
+    return this.filterFields(donors, "donors") as any;
+  }
+
+  async getDonor(id: string) {
+    this.checkPermission("donors", "read");
+    const donor = await this.storage.getDonor(id);
+    return donor ? (this.filterFields(donor, "donors") as any) : undefined;
+  }
+
+  async createDonor(donor: any) {
+    this.checkPermission("donors", "create");
+    return await this.storage.createDonor(donor);
+  }
+
+  async updateDonor(id: string, updates: any) {
+    this.checkPermission("donors", "update");
+    this.validateUpdate(updates, "donors");
+    return await this.storage.updateDonor(id, updates);
+  }
+
+  // -- Recipients -----------------------------------------------------------
+
+  async getRecipients() {
+    this.checkPermission("recipients", "read");
+    const recipients = await this.storage.getRecipients();
+    return this.filterFields(recipients, "recipients") as any;
+  }
+
+  async getRecipient(id: string) {
+    this.checkPermission("recipients", "read");
+    const recipient = await this.storage.getRecipient(id);
+    return recipient ? (this.filterFields(recipient, "recipients") as any) : undefined;
+  }
+
+  async getWaitingRecipients(organType: string) {
+    this.checkPermission("recipients", "read");
+    const recipients = await this.storage.getWaitingRecipients(organType);
+    return this.filterFields(recipients, "recipients") as any;
+  }
+
+  async createRecipient(recipient: any) {
+    this.checkPermission("recipients", "create");
+    return await this.storage.createRecipient(recipient);
+  }
+
+  async updateRecipient(id: string, updates: any) {
+    this.checkPermission("recipients", "update");
+
+    // Special case: Surgeons can only update medical data
+    if (this.userRole === "surgeon") {
+      const allowedFields = [
+        "medicalData",
+        "hlaType",
+        "antibodies",
+        "meldScore",
+        "cpcScore",
+      ];
+      const updateFields = Object.keys(updates);
+      const unauthorizedFields = updateFields.filter(
+        (field) => !allowedFields.includes(field)
+      );
+
+      if (unauthorizedFields.length > 0) {
+        throw new Error(
+          `Permission denied: Surgeons can only update medical data fields`
+        );
+      }
+    } else {
+      this.validateUpdate(updates, "recipients");
+    }
+
+    return await this.storage.updateRecipient(id, updates);
+  }
+
+  // -- Organs ---------------------------------------------------------------
+
+  async getOrgans() {
+    this.checkPermission("organs", "read");
+    const organs = await this.storage.getOrgans();
+    return this.filterFields(organs, "organs") as any;
+  }
+
+  async getOrgan(id: string) {
+    this.checkPermission("organs", "read");
+    const organ = await this.storage.getOrgan(id);
+    return organ ? (this.filterFields(organ, "organs") as any) : undefined;
+  }
+
+  async getAvailableOrgans() {
+    this.checkPermission("organs", "read");
+    const organs = await this.storage.getAvailableOrgans();
+    return this.filterFields(organs, "organs") as any;
+  }
+
+  async getOrgansByDonor(donorId: string) {
+    this.checkPermission("organs", "read");
+    const organs = await this.storage.getOrgansByDonor(donorId);
+    return this.filterFields(organs, "organs") as any;
+  }
+
+  async createOrgan(organ: any) {
+    this.checkPermission("organs", "create");
+    return await this.storage.createOrgan(organ);
+  }
+
+  async updateOrgan(id: string, updates: any) {
+    this.checkPermission("organs", "update");
+
+    // Special case: Surgeons can only update medical data
+    if (this.userRole === "surgeon") {
+      const allowedFields = ["biopsyResults", "crossmatchData", "qualityScore", "temperature"];
+      const updateFields = Object.keys(updates);
+      const unauthorizedFields = updateFields.filter(
+        (field) => !allowedFields.includes(field)
+      );
+
+      if (unauthorizedFields.length > 0) {
+        throw new Error(
+          `Permission denied: Surgeons can only update medical data fields`
+        );
+      }
+    } else {
+      this.validateUpdate(updates, "organs");
+    }
+
+    return await this.storage.updateOrgan(id, updates);
+  }
+
+  // -- Allocations ----------------------------------------------------------
+
+  async getAllocations() {
+    this.checkPermission("allocations", "read");
+    const rows = await this.storage.getAllocations();
+    return this.filterFields(rows, "allocations") as any;
+  }
+
+  async getAllocation(id: string) {
+    this.checkPermission("allocations", "read");
+    const row = await this.storage.getAllocation(id);
+    return row ? (this.filterFields(row, "allocations") as any) : undefined;
+  }
+
+  async getAllocationsByOrgan(organId: string) {
+    this.checkPermission("allocations", "read");
+    const rows = await this.storage.getAllocationsByOrgan(organId);
+    return this.filterFields(rows, "allocations") as any;
+  }
+
+  async getAllocationsByRecipient(recipientId: string) {
+    this.checkPermission("allocations", "read");
+    const rows = await this.storage.getAllocationsByRecipient(recipientId);
+    return this.filterFields(rows, "allocations") as any;
+  }
+
+  async createAllocation(allocation: any) {
+    this.checkPermission("allocations", "create");
+    return await this.storage.createAllocation(allocation);
+  }
+
+  async updateAllocation(id: string, updates: any) {
+    // Only admins and coordinators can update allocations
+    if (this.userRole !== "admin" && this.userRole !== "coordinator") {
+      throw new Error(
+        "Permission denied: Only admins and coordinators can update allocations"
+      );
+    }
+    this.checkPermission("allocations", "update");
+    this.validateUpdate(updates, "allocations");
+    return await this.storage.updateAllocation(id, updates);
+  }
+
+  // -- Transports -----------------------------------------------------------
+
+  async getTransports() {
+    this.checkPermission("transports", "read");
+    const rows = await this.storage.getTransports();
+    return this.filterFields(rows, "transports") as any;
+  }
+
+  async getTransport(id: string) {
+    this.checkPermission("transports", "read");
+    const row = await this.storage.getTransport(id);
+    return row ? (this.filterFields(row, "transports") as any) : undefined;
+  }
+
+  async getActiveTransports() {
+    this.checkPermission("transports", "read");
+    const rows = await this.storage.getActiveTransports();
+    return this.filterFields(rows, "transports") as any;
+  }
+
+  async createTransport(transport: any) {
+    this.checkPermission("transports", "create");
+    return await this.storage.createTransport(transport);
+  }
+
+  async updateTransport(id: string, updates: any) {
+    this.checkPermission("transports", "update");
+
+    // Transport role can only update specific fields
+    if (this.userRole === "transport") {
+      const allowedFields = [
+        "status",
+        "currentGpsLat",
+        "currentGpsLng",
+        "actualPickup",
+        "actualDelivery",
+      ];
+      const updateFields = Object.keys(updates);
+      const unauthorizedFields = updateFields.filter(
+        (field) => !allowedFields.includes(field)
+      );
+
+      if (unauthorizedFields.length > 0) {
+        throw new Error(
+          `Permission denied: Transport role can only update status and location fields`
+        );
+      }
+    } else {
+      this.validateUpdate(updates, "transports");
+    }
+
+    return await this.storage.updateTransport(id, updates);
+  }
+
+  // -- Messages -------------------------------------------------------------
+
+  async getMessages(allocationId?: string, transportId?: string) {
+    this.checkPermission("messages", "read");
+    return await this.storage.getMessages(allocationId, transportId);
+  }
+
+  async createMessage(message: any) {
+    this.checkPermission("messages", "create");
+    return await this.storage.createMessage(message);
+  }
+
+  async markMessageRead(id: string) {
+    this.checkPermission("messages", "update");
+    return await this.storage.markMessageRead(id);
+  }
+
+  // -- Chain of custody -----------------------------------------------------
+
+  async getCustodyLogs(organId: string) {
+    this.checkPermission("custodyLogs", "read");
+    const logs = await this.storage.getCustodyLogs(organId);
+    return this.filterFields(logs, "custodyLogs") as any;
+  }
+
+  async addCustodyLog(log: any) {
+    this.checkPermission("custodyLogs", "create");
+    return await this.storage.addCustodyLog(log);
+  }
+
+  // -- Metrics --------------------------------------------------------------
+
+  async getMetrics(period?: string) {
+    this.checkPermission("metrics", "read");
+    return await this.storage.getMetrics(period);
+  }
+
+  async addMetric(metric: any) {
+    this.checkPermission("metrics", "create");
+    return await this.storage.addMetric(metric);
+  }
+
+  // -- Audit logs (system-generated) ----------------------------------------
+
+  async createAuditLog(log: any) {
+    // Created automatically; no explicit permission needed
+    return await this.storage.createAuditLog(log);
+  }
+
+  async createAuthAuditLog(log: any) {
+    // Created automatically; no explicit permission needed
+    return await this.storage.createAuthAuditLog(log);
+  }
+
+  async getAuditLogs(filter?: any) {
+    // Only admins can view audit logs
+    if (!hasSpecialPermission(this.userRole, "viewAuditLogs")) {
+      throw new Error("Permission denied: Only admins can view audit logs");
+    }
+    return await this.storage.getAuditLogs(filter);
+  }
+
+  async getAuthAuditLogs(filter?: any) {
+    // Only admins can view auth audit logs
+    if (!hasSpecialPermission(this.userRole, "viewAuditLogs")) {
+      throw new Error(
+        "Permission denied: Only admins can view auth audit logs"
+      );
+    }
+    return await this.storage.getAuthAuditLogs(filter);
+  }
+}
+
+// Factory function to create RBAC-wrapped storage
+export function createRBACStorage(
+  storage: IStorage,
+  userRole?: UserRole,
+  userId?: string
+): IStorage {
+  return new RBACStorage(storage, userRole, userId);
+}
+
+// Default export for compatibility with `import RBACStorage from "..."`
+export default RBACStorage;

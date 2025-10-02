@@ -107,3 +107,6 @@ export function useAuth() {
     logout,
   };
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default useAuth;

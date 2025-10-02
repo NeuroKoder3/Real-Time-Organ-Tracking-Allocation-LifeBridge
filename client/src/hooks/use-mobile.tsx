@@ -17,3 +17,6 @@ export function useIsMobile() {
 
   return !!isMobile
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default useIsMobile;

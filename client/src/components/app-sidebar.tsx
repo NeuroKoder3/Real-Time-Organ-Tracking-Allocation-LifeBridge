@@ -85,3 +85,6 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default AppSidebar;

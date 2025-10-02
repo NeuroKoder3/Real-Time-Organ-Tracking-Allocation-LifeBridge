@@ -18,3 +18,6 @@ export function ThemeToggle() {
     </Button>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default ThemeToggle;

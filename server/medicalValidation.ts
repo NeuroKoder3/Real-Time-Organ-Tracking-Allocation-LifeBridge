@@ -79,3 +79,6 @@ function matchHlaMarkers(
   ).length;
   return matchCount >= 3;
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default validateOrganRecipientCompatibility;

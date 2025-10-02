@@ -202,3 +202,6 @@ export async function createManualAuditLog(
   };
   return storage.createAuditLog(auditLogData);
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default auditMiddleware;

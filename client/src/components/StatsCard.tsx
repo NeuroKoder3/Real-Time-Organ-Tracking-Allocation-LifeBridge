@@ -39,3 +39,6 @@ export function StatsCard({ title, value, description, icon: Icon, trend }: Stat
     </Card>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default StatsCard;

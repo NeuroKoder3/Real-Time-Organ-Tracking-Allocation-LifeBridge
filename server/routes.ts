@@ -408,3 +408,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default registerRoutes;

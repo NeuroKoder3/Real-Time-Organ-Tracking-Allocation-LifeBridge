@@ -141,3 +141,6 @@ export function SpecimenCard({ specimen, onEdit, onViewHistory }: SpecimenCardPr
     </Card>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default SpecimenCard;

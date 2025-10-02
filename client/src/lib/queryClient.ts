@@ -60,3 +60,6 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// auto-fix: provide default export for compatibility with default imports
+export default apiRequest;

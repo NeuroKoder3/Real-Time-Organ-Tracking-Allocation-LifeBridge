@@ -84,3 +84,6 @@ export function StatusBadge({ status, type = "specimen" }: StatusBadgeProps) {
     </Badge>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default StatusBadge;

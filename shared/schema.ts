@@ -426,3 +426,6 @@ export interface UIOrgan extends Organ {
   hlaMarkers?: string;
   specialRequirements?: string;
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default sessions;

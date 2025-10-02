@@ -128,3 +128,6 @@ export function ChainOfCustodyTimeline({ events, specimenId }: ChainOfCustodyTim
     </Card>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default ChainOfCustodyTimeline;

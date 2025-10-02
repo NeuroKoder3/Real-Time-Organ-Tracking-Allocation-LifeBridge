@@ -95,3 +95,6 @@ export function DonorCard({ donor, onEdit, onViewConsent }: DonorCardProps) {
     </Card>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default DonorCard;

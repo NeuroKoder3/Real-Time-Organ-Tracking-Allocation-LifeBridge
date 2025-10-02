@@ -248,3 +248,6 @@ export function validateUpdateFields(
     unauthorizedFields,
   };
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default hasPermission;

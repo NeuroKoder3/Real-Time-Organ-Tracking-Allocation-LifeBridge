@@ -80,3 +80,6 @@ export function QRCodeDisplay({ value, title, size = 128 }: QRCodeDisplayProps) 
     </Card>
   );
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default QRCodeDisplay;

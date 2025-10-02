@@ -47,3 +47,6 @@ export function generateTokens(payload: TokenPayload) {
   const refreshToken = generateRefreshToken(payload);
   return { accessToken, refreshToken };
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default generateAccessToken;

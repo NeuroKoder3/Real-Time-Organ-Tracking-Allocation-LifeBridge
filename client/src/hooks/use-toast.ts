@@ -189,3 +189,6 @@ function useToast() {
 }
 
 export { useToast, toast }
+
+// auto-fix: provide default export for compatibility with default imports
+export default reducer;

@@ -65,3 +65,6 @@ export async function api<T = unknown>(
     throw error;
   }
 }
+
+// auto-fix: provide default export for compatibility with default imports
+export default api;

@@ -8,7 +8,7 @@
     ".": "./dist/server/index.js"
   },
   "scripts": {
-    "dev:server": "cross-env NODE_ENV=development tsx --project tsconfig.server.json server/index.ts",
+    "dev:server": "cross-env NODE_ENV=development tsx watch --tsconfig tsconfig.server.json server/index.ts",
     "dev:client": "vite --config vite.config.ts",
     "dev": "concurrently \"pnpm run dev:server\" \"pnpm run dev:client\"",
     "build:client": "vite build --config vite.config.ts",
@@ -17,7 +17,7 @@
     "start": "cross-env NODE_ENV=production node ./dist/server/index.js",
     "check": "tsc -p tsconfig.server.json --noEmit",
     "db:push": "drizzle-kit push",
-    "backup": "tsx --project tsconfig.server.json server/backup.ts",
+    "backup": "tsx --tsconfig tsconfig.server.json server/backup.ts",
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage",

@@ -6,7 +6,7 @@ LifeBridge is a full-stack, real-time application for tracking, allocating, and 
 
 🌐 Visit Deployed App (via Netlify)
 
-(Replace with your real URL)
+https://lifebridge-opotracking.netlify.app/
 
 📦 Tech Stack
 Frontend:

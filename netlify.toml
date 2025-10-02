@@ -1,12 +1,14 @@
 # Netlify configuration for LifeBridge
 
 [build]
-  command = "pnpm install --prod=false && pnpm run build:client"
-  publish = "client/dist"
+  # ✅ Install dependencies before build to ensure vite is available
+  command = "pnpm install --frozen-lockfile && pnpm run build:client"
+  # ✅ Matches your vite.config.ts outDir → dist/client
+  publish = "dist/client"
 
 [build.environment]
   NODE_ENV = "production"
-  NODE_VERSION = "18"
+  NODE_VERSION = "18.20.2"   # stable Node 18.x
   PNPM_VERSION = "8"
   VITE_API_URL = "https://api.lifebridge.online"
 
@@ -26,7 +28,10 @@
   to = "/index.html"
   status = 200
 
-# ✅ Asset caching
+# ------------------------
+# 📦 Asset caching
+# ------------------------
+
 [[headers]]
   for = "/assets/*"
   [headers.values]

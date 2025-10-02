@@ -1,27 +1,17 @@
 # Netlify configuration for LifeBridge
 
 [build]
-  command = "pnpm run build:client"
+  command = "pnpm install --prod=false && pnpm run build:client"
   publish = "client/dist"
 
 [build.environment]
   NODE_ENV = "production"
   NODE_VERSION = "18"
   PNPM_VERSION = "8"
+  VITE_API_URL = "https://api.lifebridge.online"
 
 [functions]
   node_bundler = "esbuild"
-
-# ✅ Ensure static assets are served correctly
-[[redirects]]
-  from = "/assets/*"
-  to = "/assets/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/favicon.svg"
-  to = "/favicon.svg"
-  status = 200
 
 # ✅ Proxy API requests to backend
 [[redirects]]
@@ -30,31 +20,25 @@
   status = 200
   force = true
 
-# ✅ SPA fallback (routes → index.html)
+# ✅ SPA fallback (React Router → index.html)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# ------------------------
-# 📦 Headers for caching + MIME types
-# ------------------------
-
-# Cache-busting for JS/CSS (hashed filenames)
+# ✅ Asset caching
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
     Cache-Control = "public, max-age=31536000, immutable"
 
-# CSS served properly
 [[headers]]
   for = "/*.css"
   [headers.values]
     Content-Type = "text/css; charset=utf-8"
     Cache-Control = "public, max-age=31536000, immutable"
 
-# SVG & images
 [[headers]]
   for = "/*.svg"
   [headers.values]

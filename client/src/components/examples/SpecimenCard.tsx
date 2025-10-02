@@ -1,4 +1,4 @@
-import { SpecimenCard } from '../SpecimenCard';
+import SpecimenCard from "../SpecimenCard";
 
 export default function SpecimenCardExample() {
   // todo: remove mock functionality

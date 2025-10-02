@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "./StatusBadge";
-import { QRCodeDisplay } from "./QRCodeDisplay";
+import StatusBadge from "./StatusBadge";
+import QRCodeDisplay from "./QRCodeDisplay";
 import { Package, MapPin, Calendar, Thermometer, Edit, History } from "lucide-react";
 import { format } from "date-fns";
 

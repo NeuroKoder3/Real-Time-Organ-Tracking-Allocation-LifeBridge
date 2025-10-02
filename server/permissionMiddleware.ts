@@ -10,7 +10,7 @@ import {
   type SpecialOperation,
   type EntityType,
 } from "./permissions.js";
-import { createManualAuditLog } from "./auditMiddleware.js";
+import createManualAuditLog from "./auditMiddleware.js";
 import type { AuthenticatedRequest } from "./types.js";
 
 // ---------------------------------------------------------

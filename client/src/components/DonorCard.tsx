@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "./StatusBadge";
-import { QRCodeDisplay } from "./QRCodeDisplay";
+import StatusBadge from "./StatusBadge";
+import QRCodeDisplay from "./QRCodeDisplay";
 import { FileText, User, Edit } from "lucide-react";
 import { format } from "date-fns";
 

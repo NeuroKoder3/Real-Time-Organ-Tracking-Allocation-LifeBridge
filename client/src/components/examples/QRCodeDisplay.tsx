@@ -1,4 +1,4 @@
-import { QRCodeDisplay } from '../QRCodeDisplay';
+import QRCodeDisplay from "../QRCodeDisplay";
 
 export default function QRCodeDisplayExample() {
   return (

@@ -1,4 +1,4 @@
-import { StatsCard } from '../StatsCard';
+import StatsCard from "../StatsCard";
 import { Package, Users, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function StatsCardExample() {

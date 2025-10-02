@@ -2,15 +2,14 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 
 import { storage as baseStorage } from "./storage.js";
-import { createRBACStorage } from "./rbacStorage.js";
-import { createManualAuditLog } from "./auditMiddleware.js";
+import createRBACStorage from "./rbacStorage.js";
+import createManualAuditLog from "./auditMiddleware.js";
 import { enrichUserWithRole, withPermissions } from "./permissionMiddleware.js";
 import type { AuthenticatedRequest } from "./types.js";
 import type { UserRole } from "../shared/schema.js";
-
-import { authenticateToken } from "./authMiddleware.js";
+import authenticateToken from "./authMiddleware.js";
 import authRoutes from "./authRoutes.js";
-import { unosService } from "./integrations/unosService.js";
+import unosService from "./integrations/unosService.js";
 import complianceReports from "./complianceReports.js";
 import complianceStatus from "./complianceStatus.js";
 

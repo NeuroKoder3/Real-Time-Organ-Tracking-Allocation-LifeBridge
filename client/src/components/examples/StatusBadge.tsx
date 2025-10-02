@@ -1,4 +1,4 @@
-import { StatusBadge } from '../StatusBadge';
+import StatusBadge from "../StatusBadge";
 
 export default function StatusBadgeExample() {
   return (

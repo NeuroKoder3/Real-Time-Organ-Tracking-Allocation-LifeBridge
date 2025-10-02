@@ -36,7 +36,7 @@ import {
   type InsertAuthAuditLog,
 } from "../shared/schema.js";
 
-import { db } from "./db.js";
+import db from "./db.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto"; // (currently unused, kept as-is)
 import { encryptionService, PHI_FIELDS } from "./encryptionService.js";
@@ -632,3 +632,4 @@ export class DatabaseStorage implements IStorage {
 // ✅ Named export (existing) AND default export (new)
 export const storage = new DatabaseStorage();
 export default storage;
+

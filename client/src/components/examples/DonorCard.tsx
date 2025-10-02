@@ -1,4 +1,4 @@
-import { DonorCard } from '../DonorCard';
+import DonorCard from "../DonorCard";
 
 export default function DonorCardExample() {
   // todo: remove mock functionality

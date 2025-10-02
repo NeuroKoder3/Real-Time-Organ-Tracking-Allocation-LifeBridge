@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from "express";
-import { storage } from "./storage.js";
+import storage from "./storage.js";
 import type { InsertAuditLog, UserRole } from "../shared/schema.js";
 import type { AuthenticatedRequest } from "./types.js";
 

@@ -1,4 +1,4 @@
-import { ChainOfCustodyTimeline } from '../ChainOfCustodyTimeline';
+import ChainOfCustodyTimeline from "../ChainOfCustodyTimeline";
 
 export default function ChainOfCustodyTimelineExample() {
   // todo: remove mock functionality

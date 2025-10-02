@@ -42,9 +42,8 @@ import helmet from "helmet";
 import csurf from "csurf";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
-import { registerRoutes } from "./routes.js";
-import { errorHandler } from "./middleware/errorHandler.js";
+import registerRoutes from "./routes.js";
+import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
 
 // ✅ ESM-safe __dirname / __filename

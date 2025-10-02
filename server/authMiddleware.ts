@@ -3,7 +3,7 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import type { UserRole } from "../../shared/schema.js"; // fixed relative path
+import type { UserRole } from "../../shared/schema"; // fixed: removed .js extension
 
 dotenv.config();
 

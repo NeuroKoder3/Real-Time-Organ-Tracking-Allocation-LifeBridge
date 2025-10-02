@@ -6,20 +6,14 @@ import createRBACStorage from "./rbacStorage.js";
 import createManualAuditLog from "./auditMiddleware.js";
 import { enrichUserWithRole, withPermissions } from "./permissionMiddleware.js";
 import type { AuthenticatedRequest } from "./types.js";
-import type { UserRole } from "../shared/schema.js";
+import type { UserRole } from "../shared/schema";
 import authenticateToken from "./authMiddleware.js";
 import authRoutes from "./authRoutes.js";
 import unosService from "./integrations/unosService.js";
 import complianceReports from "./complianceReports.js";
 import complianceStatus from "./complianceStatus.js";
 
-// ---------------------------------------------------------
-// Register all routes
-// ---------------------------------------------------------
 export async function registerRoutes(app: Express): Promise<Server> {
-  // -----------------------
-  // Auth routes
-  // -----------------------
   app.use("/api/auth", authRoutes);
 
   app.get(
@@ -34,10 +28,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        const storage = createRBACStorage(
+        const storage = new createRBACStorage(
           baseStorage,
           (user?.role as UserRole) || "coordinator",
-          userId,
+          userId
         );
         const foundUser = await storage.getUser(userId);
         if (foundUser) {
@@ -47,10 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const minimalUser = {
           id: userId,
           email: user?.claims?.email ?? "unknown@example.com",
-          name:
-            user?.claims?.name ??
-            user?.claims?.email?.split("@")[0] ??
-            "User",
+          name: user?.claims?.name ?? user?.claims?.email?.split("@")[0] ?? "User",
           role: (user?.role as UserRole) || "coordinator",
         };
         return res.json(minimalUser);
@@ -59,20 +50,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const minimalUser = {
           id: userId,
           email: user?.claims?.email ?? "unknown@example.com",
-          name:
-            user?.claims?.name ??
-            user?.claims?.email?.split("@")[0] ??
-            "User",
+          name: user?.claims?.name ?? user?.claims?.email?.split("@")[0] ?? "User",
           role: (user?.role as UserRole) || "coordinator",
         };
         return res.json(minimalUser);
       }
-    },
+    }
   );
 
-  // -----------------------
-  // Encryption status
-  // -----------------------
   app.get("/api/test/encryption-status", async (_req: Request, res: Response) => {
     try {
       const encryptionStatus = {
@@ -99,165 +84,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Compliance routes
-  // -----------------------
   app.use("/api/compliance", complianceReports);
   app.use("/api/compliance", complianceStatus);
 
-  // -----------------------
-  // Organ routes
-  // -----------------------
-  app.get(
-    "/api/organs",
-    authenticateToken,
-    ...withPermissions("organs", "read"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
-        const organs = await storage.getOrgans();
-        res.json(organs);
-      } catch (error) {
-        console.error("Error fetching organs:", error);
-        res.status(500).json({ message: "Failed to fetch organs" });
-      }
-    },
-  );
+  app.get("/api/organs", authenticateToken, ...withPermissions("organs", "read"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const organs = await storage.getOrgans();
+      res.json(organs);
+    } catch (error) {
+      console.error("Error fetching organs:", error);
+      res.status(500).json({ message: "Failed to fetch organs" });
+    }
+  });
 
-  app.get(
-    "/api/organs/:id",
-    authenticateToken,
-    ...withPermissions("organs", "read"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
-        const organ = await storage.getOrgan(req.params.id);
-        if (!organ) {
-          return res.status(404).json({ message: "Organ not found" });
-        }
-        res.json(organ);
-      } catch (error) {
-        console.error("Error fetching organ:", error);
-        res.status(500).json({ message: "Failed to fetch organ" });
-      }
-    },
-  );
+  app.get("/api/organs/:id", authenticateToken, ...withPermissions("organs", "read"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const organ = await storage.getOrgan(req.params.id);
+      if (!organ) return res.status(404).json({ message: "Organ not found" });
+      res.json(organ);
+    } catch (error) {
+      console.error("Error fetching organ:", error);
+      res.status(500).json({ message: "Failed to fetch organ" });
+    }
+  });
 
-  app.post(
-    "/api/organs",
-    authenticateToken,
-    ...withPermissions("organs", "create"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+  app.post("/api/organs", authenticateToken, ...withPermissions("organs", "create"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
 
-        const data = {
-          ...req.body,
-          viabilityDeadline: new Date(Date.now() + req.body.viabilityHours * 60 * 60 * 1000).toISOString(),
-          preservationStartTime: req.body.preservationStartTime || new Date().toISOString(),
-        };
+      const data = {
+        ...req.body,
+        viabilityDeadline: new Date(Date.now() + req.body.viabilityHours * 60 * 60 * 1000).toISOString(),
+        preservationStartTime: req.body.preservationStartTime || new Date().toISOString(),
+      };
 
-        const organ = await storage.createOrgan(data);
-        res.json(organ);
-      } catch (error) {
-        console.error("Error creating organ:", error);
-        res.status(500).json({ message: "Failed to create organ" });
-      }
-    },
-  );
+      const organ = await storage.createOrgan(data);
+      res.json(organ);
+    } catch (error) {
+      console.error("Error creating organ:", error);
+      res.status(500).json({ message: "Failed to create organ" });
+    }
+  });
 
-  app.put(
-    "/api/organs/:id",
-    authenticateToken,
-    ...withPermissions("organs", "update"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
-        const organ = await storage.updateOrgan(req.params.id, req.body);
-        res.json(organ);
-      } catch (error) {
-        console.error("Error updating organ:", error);
-        res.status(500).json({ message: "Failed to update organ" });
-      }
-    },
-  );
+  app.put("/api/organs/:id", authenticateToken, ...withPermissions("organs", "update"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const organ = await storage.updateOrgan(req.params.id, req.body);
+      res.json(organ);
+    } catch (error) {
+      console.error("Error updating organ:", error);
+      res.status(500).json({ message: "Failed to update organ" });
+    }
+  });
 
-  app.delete(
-    "/api/organs/:id",
-    authenticateToken,
-    ...withPermissions("organs", "delete"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
-        await storage.updateOrgan(req.params.id, { status: "discarded" });
-        res.json({ success: true });
-      } catch (error) {
-        console.error("Error deleting organ:", error);
-        res.status(500).json({ message: "Failed to delete organ" });
-      }
-    },
-  );
+  app.delete("/api/organs/:id", authenticateToken, ...withPermissions("organs", "delete"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      await storage.updateOrgan(req.params.id, { status: "discarded" });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting organ:", error);
+      res.status(500).json({ message: "Failed to delete organ" });
+    }
+  });
 
-  // -----------------------
-  // Recipient routes
-  // -----------------------
-  app.get(
-    "/api/recipients",
-    authenticateToken,
-    ...withPermissions("recipients", "read"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
-        const recipients = await storage.getRecipients();
-        res.json(recipients);
-      } catch (error) {
-        console.error("Error fetching recipients:", error);
-        res.status(500).json({ message: "Failed to fetch recipients" });
-      }
-    },
-  );
+  app.get("/api/recipients", authenticateToken, ...withPermissions("recipients", "read"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const recipients = await storage.getRecipients();
+      res.json(recipients);
+    } catch (error) {
+      console.error("Error fetching recipients:", error);
+      res.status(500).json({ message: "Failed to fetch recipients" });
+    }
+  });
 
-  app.post(
-    "/api/recipients",
-    authenticateToken,
-    ...withPermissions("recipients", "create"),
-    async (req: Request, res: Response) => {
-      try {
-        const { user } = req as AuthenticatedRequest;
-        const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+  app.post("/api/recipients", authenticateToken, ...withPermissions("recipients", "create"), async (req: Request, res: Response) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
 
-        const data = {
-          firstName: req.body.name?.split(" ")[0] || req.body.firstName,
-          lastName: req.body.name?.split(" ").slice(1).join(" ") || req.body.lastName,
-          unosId: req.body.medicalId || req.body.unosId,
-          bloodType: req.body.bloodType,
-          organNeeded: req.body.organNeeded,
-          urgencyStatus: req.body.urgencyLevel || req.body.urgencyStatus || "3",
-          waitlistDate: req.body.waitListDate || req.body.waitlistDate || new Date().toISOString(),
-          location: req.body.hospital || req.body.location,
-          hospitalId: req.body.hospitalId,
-          medicalData: {
-            conditions: req.body.medicalConditions,
-            compatibilityScore: req.body.compatibilityScore,
-          },
-          hlaType: req.body.hlaMarkers ? { markers: req.body.hlaMarkers } : null,
-          status: req.body.status || "waiting",
-        };
+      const data = {
+        firstName: req.body.name?.split(" ")[0] || req.body.firstName,
+        lastName: req.body.name?.split(" ").slice(1).join(" ") || req.body.lastName,
+        unosId: req.body.medicalId || req.body.unosId,
+        bloodType: req.body.bloodType,
+        organNeeded: req.body.organNeeded,
+        urgencyStatus: req.body.urgencyLevel || req.body.urgencyStatus || "3",
+        waitlistDate: req.body.waitListDate || req.body.waitlistDate || new Date().toISOString(),
+        location: req.body.hospital || req.body.location,
+        hospitalId: req.body.hospitalId,
+        medicalData: {
+          conditions: req.body.medicalConditions,
+          compatibilityScore: req.body.compatibilityScore,
+        },
+        hlaType: req.body.hlaMarkers ? { markers: req.body.hlaMarkers } : null,
+        status: req.body.status || "waiting",
+      };
 
-        const recipient = await storage.createRecipient(data);
-        res.json(recipient);
-      } catch (error) {
-        console.error("Error creating recipient:", error);
-        res.status(500).json({ message: "Failed to create recipient" });
-      }
-    },
-  );
+      const recipient = await storage.createRecipient(data);
+      res.json(recipient);
+    } catch (error) {
+      console.error("Error creating recipient:", error);
+      res.status(500).json({ message: "Failed to create recipient" });
+    }
+  });
 
   app.put("/api/recipients/:id", authenticateToken, async (req: Request, res: Response) => {
     try {
@@ -279,9 +218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Allocation routes
-  // -----------------------
   app.get("/api/allocations", authenticateToken, async (_req: Request, res: Response) => {
     try {
       const allocations = await baseStorage.getAllocations();
@@ -317,9 +253,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Transport routes
-  // -----------------------
   app.get("/api/transports", authenticateToken, async (_req: Request, res: Response) => {
     try {
       const transports = await baseStorage.getTransports();
@@ -330,14 +263,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Messages
-  // -----------------------
   app.get("/api/messages", authenticateToken, async (req: Request, res: Response) => {
     try {
       const messages = await baseStorage.getMessages(
         req.query.allocationId as string,
-        req.query.transportId as string,
+        req.query.transportId as string
       );
       res.json(messages);
     } catch (error) {
@@ -346,9 +276,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Metrics
-  // -----------------------
   app.get("/api/metrics", authenticateToken, async (req: Request, res: Response) => {
     try {
       const metrics = await baseStorage.getMetrics(req.query.period as string);
@@ -359,9 +286,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Donors (legacy)
-  // -----------------------
   app.get("/api/donors", authenticateToken, async (_req: Request, res: Response) => {
     try {
       const donors = await baseStorage.getDonors();
@@ -372,26 +296,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Audit logs
-  // -----------------------
   app.get("/api/audit-logs", authenticateToken, async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
       const dbUser = await baseStorage.getUser(user?.claims?.sub || "");
       if (dbUser?.role !== "admin") {
-        await createManualAuditLog(
-          req as AuthenticatedRequest,
-          "unauthorized_access",
-          "auditLogs",
-          "",
-          {
-            success: false,
-            errorMessage: "Forbidden: Admin access required",
-            errorCode: "FORBIDDEN",
-            phiAccessed: false,
-          },
-        );
+        await createManualAuditLog(req, "unauthorized_access", {
+          entityType: "auditLogs",
+          entityId: "",
+          success: false,
+          errorMessage: "Forbidden: Admin access required",
+          errorCode: "FORBIDDEN",
+          phiAccessed: false,
+        });
         return res.status(403).json({ message: "Forbidden: Admin access required" });
       }
       const auditLogs = await baseStorage.getAuditLogs({});
@@ -402,12 +319,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // -----------------------
-  // Return server
-  // -----------------------
   const httpServer = createServer(app);
   return httpServer;
 }
 
-// auto-fix: provide default export for compatibility with default imports
 export default registerRoutes;

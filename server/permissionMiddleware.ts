@@ -1,7 +1,7 @@
 import type { Response, NextFunction } from "express";
 import { parse } from "url";
 
-import type { UserRole } from "../shared/schema.js";
+import type { UserRole } from "../shared/schema"; // removed .js
 import {
   hasPermission,
   hasSpecialPermission,
@@ -103,18 +103,14 @@ export function requirePermission(
       const userId = req.user?.claims?.sub;
 
       if (!userRole) {
-        await createManualAuditLog(
-          req,
-          "unauthorized_access",
-          entityType || getEntityTypeFromPath(req.path),
-          extractEntityId(req.url) || "",
-          {
-            success: false,
-            errorMessage: "User role not found",
-            errorCode: "ROLE_NOT_FOUND",
-            phiAccessed: false,
-          },
-        );
+        await createManualAuditLog(req, "unauthorized_access", {
+          entityType: entityType || getEntityTypeFromPath(req.path),
+          entityId: extractEntityId(req.url) || "",
+          success: false,
+          errorMessage: "User role not found",
+          errorCode: "ROLE_NOT_FOUND",
+          phiAccessed: false,
+        });
         return res.status(403).json({
           message: "Access denied: User role not found",
           code: "ROLE_NOT_FOUND",
@@ -126,19 +122,15 @@ export function requirePermission(
       const finalOperation = operation || methodToOperation[req.method];
 
       if (specialOp && !hasSpecialPermission(userRole, specialOp)) {
-        await createManualAuditLog(
-          req,
-          "unauthorized_special_operation",
-          finalEntityType,
-          extractEntityId(req.url) || "",
-          {
-            success: false,
-            errorMessage: `Special operation ${specialOp} not allowed for role ${userRole}`,
-            errorCode: "SPECIAL_OP_DENIED",
-            metadata: { specialOperation: specialOp },
-            phiAccessed: false,
-          },
-        );
+        await createManualAuditLog(req, "unauthorized_special_operation", {
+          entityType: finalEntityType,
+          entityId: extractEntityId(req.url) || "",
+          success: false,
+          errorMessage: `Special operation ${specialOp} not allowed for role ${userRole}`,
+          errorCode: "SPECIAL_OP_DENIED",
+          metadata: { specialOperation: specialOp },
+          phiAccessed: false,
+        });
         return res.status(403).json({
           message: `Access denied: ${specialOp} operation not allowed for your role`,
           code: "SPECIAL_OP_DENIED",
@@ -150,18 +142,14 @@ export function requirePermission(
         finalOperation &&
         !hasPermission(userRole, finalEntityType as EntityType, finalOperation)
       ) {
-        await createManualAuditLog(
-          req,
-          "unauthorized_access",
-          finalEntityType,
-          extractEntityId(req.url) || "",
-          {
-            success: false,
-            errorMessage: `Operation ${finalOperation} on ${finalEntityType} not allowed for role ${userRole}`,
-            errorCode: "OPERATION_DENIED",
-            phiAccessed: false,
-          },
-        );
+        await createManualAuditLog(req, "unauthorized_access", {
+          entityType: finalEntityType,
+          entityId: extractEntityId(req.url) || "",
+          success: false,
+          errorMessage: `Operation ${finalOperation} on ${finalEntityType} not allowed for role ${userRole}`,
+          errorCode: "OPERATION_DENIED",
+          phiAccessed: false,
+        });
         return res.status(403).json({
           message: `Access denied: Cannot ${finalOperation} ${finalEntityType}`,
           code: "OPERATION_DENIED",
@@ -179,19 +167,15 @@ export function requirePermission(
           finalEntityType as EntityType,
         );
         if (!validation.valid) {
-          await createManualAuditLog(
-            req,
-            "unauthorized_field_update",
-            finalEntityType,
-            extractEntityId(req.url) || "",
-            {
-              success: false,
-              errorMessage: "Unauthorized field update attempt",
-              errorCode: "FIELD_UPDATE_DENIED",
-              metadata: { unauthorizedFields: validation.unauthorizedFields },
-              phiAccessed: false,
-            },
-          );
+          await createManualAuditLog(req, "unauthorized_field_update", {
+            entityType: finalEntityType,
+            entityId: extractEntityId(req.url) || "",
+            success: false,
+            errorMessage: "Unauthorized field update attempt",
+            errorCode: "FIELD_UPDATE_DENIED",
+            metadata: { unauthorizedFields: validation.unauthorizedFields },
+            phiAccessed: false,
+          });
           return res.status(403).json({
             message: `Access denied: Cannot update fields: ${validation.unauthorizedFields.join(
               ", ",

@@ -129,7 +129,6 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(recipients);
     const conditions = [];
 
-    // Use deterministic encryption to search for encrypted names
     if (firstName) {
       const encryptedFirstName = encryptionService.encryptDeterministic(firstName);
       if (encryptedFirstName) {
@@ -150,8 +149,7 @@ export class DatabaseStorage implements IStorage {
 
     const results = await query;
 
-    // Decrypt PHI fields for each recipient
-    return results.map((recipient) =>
+    return results.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -161,7 +159,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchDonorsByLocation(location: string): Promise<Donor[]> {
-    // Use deterministic encryption to search for location
     const encryptedLocation = encryptionService.encryptDeterministic(location);
     if (!encryptedLocation) return [];
 
@@ -170,8 +167,7 @@ export class DatabaseStorage implements IStorage {
       .from(donors)
       .where(eq(donors.location, JSON.stringify(encryptedLocation)));
 
-    // Decrypt PHI fields for each donor
-    return results.map((donor) =>
+    return results.map((donor: Donor) =>
       encryptionService.decryptObject(
         donor,
         PHI_FIELDS.donors.fields,
@@ -181,7 +177,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchRecipientsByLocation(location: string): Promise<Recipient[]> {
-    // Use deterministic encryption to search for location
     const encryptedLocation = encryptionService.encryptDeterministic(location);
     if (!encryptedLocation) return [];
 
@@ -190,8 +185,7 @@ export class DatabaseStorage implements IStorage {
       .from(recipients)
       .where(eq(recipients.location, JSON.stringify(encryptedLocation)));
 
-    // Decrypt PHI fields for each recipient
-    return results.map((recipient) =>
+    return results.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -200,14 +194,13 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  // User operations for authentication
+  // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // First check if user exists by email
     const existingUser = await db
       .select()
       .from(users)
@@ -215,7 +208,6 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     if (existingUser.length > 0) {
-      // Update existing user
       const [user] = await db
         .update(users)
         .set({
@@ -226,7 +218,6 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return user;
     } else {
-      // Insert new user
       const [user] = await db.insert(users).values(userData).returning();
       return user;
     }
@@ -235,8 +226,7 @@ export class DatabaseStorage implements IStorage {
   // Donor operations
   async getDonors(): Promise<Donor[]> {
     const donorsList = await db.select().from(donors).orderBy(desc(donors.createdAt));
-    // Decrypt PHI fields for each donor
-    return donorsList.map((donor) =>
+    return donorsList.map((donor: Donor) =>
       encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields)
     );
   }
@@ -250,19 +240,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDonor(donorData: InsertDonor): Promise<Donor> {
-    // Encrypt PHI fields before inserting
     const encryptedData = encryptionService.encryptObject(
       donorData,
       PHI_FIELDS.donors.fields,
       PHI_FIELDS.donors.deterministicFields
     );
     const [donor] = await db.insert(donors).values(encryptedData).returning();
-    // Decrypt before returning
     return encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields);
   }
 
   async updateDonor(id: string, updates: Partial<InsertDonor>): Promise<Donor> {
-    // Encrypt PHI fields in updates
     const encryptedUpdates = encryptionService.encryptObject(
       updates,
       PHI_FIELDS.donors.fields,
@@ -273,15 +260,13 @@ export class DatabaseStorage implements IStorage {
       .set({ ...encryptedUpdates, updatedAt: new Date() })
       .where(eq(donors.id, id))
       .returning();
-    // Decrypt before returning
     return encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields);
   }
 
   // Recipient operations
   async getRecipients(): Promise<Recipient[]> {
     const recipientsList = await db.select().from(recipients).orderBy(recipients.waitlistDate);
-    // Decrypt PHI fields for each recipient
-    return recipientsList.map((recipient) =>
+    return recipientsList.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -309,8 +294,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(recipients.organNeeded, organType), eq(recipients.status, "waiting")))
       .orderBy(recipients.urgencyStatus, recipients.waitlistDate);
 
-    // Decrypt PHI fields for each recipient
-    return recipientsList.map((recipient) =>
+    return recipientsList.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -320,14 +304,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRecipient(recipientData: InsertRecipient): Promise<Recipient> {
-    // Encrypt PHI fields before inserting
     const encryptedData = encryptionService.encryptObject(
       recipientData,
       PHI_FIELDS.recipients.fields,
       PHI_FIELDS.recipients.deterministicFields
     );
     const [recipient] = await db.insert(recipients).values(encryptedData).returning();
-    // Decrypt before returning
     return encryptionService.decryptObject(
       recipient,
       PHI_FIELDS.recipients.fields,
@@ -336,7 +318,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRecipient(id: string, updates: Partial<InsertRecipient>): Promise<Recipient> {
-    // Encrypt PHI fields in updates
     const encryptedUpdates = encryptionService.encryptObject(
       updates,
       PHI_FIELDS.recipients.fields,
@@ -347,7 +328,6 @@ export class DatabaseStorage implements IStorage {
       .set({ ...encryptedUpdates, updatedAt: new Date() })
       .where(eq(recipients.id, id))
       .returning();
-    // Decrypt before returning
     return encryptionService.decryptObject(
       recipient,
       PHI_FIELDS.recipients.fields,
@@ -355,6 +335,7 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
+  // Rest of the code continues unchanged...
   // Organ operations
   async getOrgans(): Promise<Organ[]> {
     return await db.select().from(organs).orderBy(desc(organs.createdAt));
@@ -470,8 +451,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     const messagesList = await query.orderBy(desc(messages.createdAt));
-    // Decrypt PHI fields for each message
-    return messagesList.map((message) =>
+    return messagesList.map((message: Message) =>
       encryptionService.decryptObject(
         message,
         PHI_FIELDS.messages.fields,
@@ -481,14 +461,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMessage(messageData: InsertMessage): Promise<Message> {
-    // Encrypt PHI fields before inserting
     const encryptedData = encryptionService.encryptObject(
       messageData,
       PHI_FIELDS.messages.fields,
       PHI_FIELDS.messages.deterministicFields
     );
     const [message] = await db.insert(messages).values(encryptedData).returning();
-    // Decrypt before returning
     return encryptionService.decryptObject(
       message,
       PHI_FIELDS.messages.fields,
@@ -504,8 +482,7 @@ export class DatabaseStorage implements IStorage {
   // Chain of custody operations
   async getCustodyLogs(organId: string): Promise<CustodyLog[]> {
     const logs = await db.select().from(custodyLogs).where(eq(custodyLogs.organId, organId));
-    // Decrypt PHI fields for each log
-    return logs.map((log) =>
+    return logs.map((log: CustodyLog) =>
       encryptionService.decryptObject(
         log,
         PHI_FIELDS.custodyLogs.fields,
@@ -515,14 +492,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addCustodyLog(logData: InsertCustodyLog): Promise<CustodyLog> {
-    // Encrypt PHI fields before inserting
     const encryptedData = encryptionService.encryptObject(
       logData,
       PHI_FIELDS.custodyLogs.fields,
       PHI_FIELDS.custodyLogs.deterministicFields
     );
     const [log] = await db.insert(custodyLogs).values(encryptedData).returning();
-    // Decrypt before returning
     return encryptionService.decryptObject(
       log,
       PHI_FIELDS.custodyLogs.fields,
@@ -564,7 +539,7 @@ export class DatabaseStorage implements IStorage {
     sessionId?: string;
   }): Promise<AuditLog[]> {
     let query = db.select().from(auditLogs);
-    const conditions = [];
+    const conditions: any[] = [];
 
     if (filter?.userId) {
       conditions.push(eq(auditLogs.userId, filter.userId));
@@ -603,7 +578,7 @@ export class DatabaseStorage implements IStorage {
     sessionId?: string;
   }): Promise<AuthAuditLog[]> {
     let query = db.select().from(authAuditLogs);
-    const conditions = [];
+    const conditions: any[] = [];
 
     if (filter?.userId) {
       conditions.push(eq(authAuditLogs.userId, filter.userId));
@@ -632,4 +607,3 @@ export class DatabaseStorage implements IStorage {
 // ✅ Named export (existing) AND default export (new)
 export const storage = new DatabaseStorage();
 export default storage;
-

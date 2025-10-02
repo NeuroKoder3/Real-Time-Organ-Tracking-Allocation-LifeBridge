@@ -3,73 +3,72 @@ import fs from "fs";
 import { join } from "path";
 import dotenv from "dotenv";
 
-const envPath = join(process.cwd(), ".env");
+// ---------------------------------------------------------
+// 1) Pick env file depending on NODE_ENV
+// ---------------------------------------------------------
+const envFile =
+  process.env.NODE_ENV === "production"
+    ? ".env.production"
+    : process.env.NODE_ENV === "development"
+    ? ".env.development"
+    : ".env";
+
+const envPath = join(process.cwd(), envFile);
 
 // ---------------------------------------------------------
-// 1) Read .env as raw text (UTF-8), strip BOM, normalize
+// 2) Read env file raw (UTF-8), strip BOM
 // ---------------------------------------------------------
 let raw = "";
 if (fs.existsSync(envPath)) {
   raw = fs.readFileSync(envPath, "utf8");
-  // strip BOM
-  if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+  if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1); // strip BOM
 } else {
-  console.warn(`⚠️  .env file not found at ${envPath}`);
+  console.warn(`⚠️  ${envFile} file not found at ${envPath}`);
 }
 
 // ---------------------------------------------------------
-// 2) First: run dotenv normally (loads most keys)
+// 3) Run dotenv normally (loads most keys)
 // ---------------------------------------------------------
 if (raw) {
   dotenv.config({ path: envPath });
-  console.log(`[dotenv] Loaded .env from ${envPath}`);
+  console.log(`[dotenv] Loaded ${envFile} from ${envPath}`);
 }
 
 // ---------------------------------------------------------
-// 3) Hardened manual parser to inject ANY missing keys
-//    - Ignores comments
-//    - Supports quoted values
-//    - Trims stray/invisible chars
-//    - Works around CRLF / weird whitespace
+// 4) Hardened manual parser (fills missing keys)
 // ---------------------------------------------------------
 if (raw) {
   const lines = raw.split(/\r?\n/);
   for (let line of lines) {
-    // trim and remove leading BOM / zero-width / NBSP
     line = line.replace(/^\uFEFF/, "").replace(/\u200B|\u00A0/g, "").trim();
     if (!line || line.startsWith("#")) continue;
 
-    // match KEY=VALUE (KEY is A-Z,0-9,_, starting with letter/_)
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
     if (!m) continue;
 
     const key = m[1];
     let value = m[2];
 
-    // quoted value handling
     if (
       (value.startsWith('"') && value.endsWith('"')) ||
       (value.startsWith("'") && value.endsWith("'"))
     ) {
       value = value.slice(1, -1);
     } else {
-      // strip trailing inline comments on unquoted values
       const hashIdx = value.indexOf("#");
       if (hashIdx !== -1) value = value.slice(0, hashIdx).trim();
     }
 
     value = value.trim();
 
-    // inject ONLY if missing or empty
     if (!process.env[key] || process.env[key]?.trim() === "") {
       process.env[key] = value;
-      // console.log(`[dotenv-fallback] Injected ${key}`);
     }
   }
 }
 
 // ---------------------------------------------------------
-// 4) Validation (prod must throw; dev/test warn & set placeholder)
+// 5) Validation
 // ---------------------------------------------------------
 const isProd = process.env.NODE_ENV === "production";
 
@@ -77,12 +76,10 @@ function requireEnv(key: string): string {
   const v = process.env[key]?.trim();
   if (v) return v;
 
-  const msg = `Missing env: ${key}`;
   if (isProd) {
-    throw new Error(`❌ ${key} must be set in your environment (.env / CI vars)`);
+    throw new Error(`❌ ${key} must be set in ${envFile} or system environment`);
   } else {
-    // In non-production, warn and set a safe placeholder to avoid boot crashes.
-    console.warn(`⚠️  ${msg} — using development placeholder value.`);
+    console.warn(`⚠️ Missing env: ${key} — using development placeholder`);
     const placeholder = getDevPlaceholder(key);
     process.env[key] = placeholder;
     return placeholder;
@@ -99,7 +96,6 @@ function getDevPlaceholder(key: string): string {
       return "refreshchangeme";
     case "ENCRYPTION_MASTER_KEY":
     case "ENCRYPTION_DETERMINISTIC_KEY":
-      // 32 bytes hex (64 chars) – acceptable dev placeholder
       return "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     case "ENCRYPTION_KEY_VERSION":
       return "1";
@@ -111,7 +107,7 @@ function getDevPlaceholder(key: string): string {
 }
 
 // ---------------------------------------------------------
-// 5) Build ENV object
+// 6) Build ENV object
 // ---------------------------------------------------------
 export const ENV = {
   DATABASE_URL: requireEnv("DATABASE_URL"),
@@ -123,13 +119,12 @@ export const ENV = {
   PORT: process.env.PORT || "5000",
 };
 
-// Convenience helper if you need to ensure env is loaded elsewhere
 export function loadEnv() {
   return ENV;
 }
 
 // ---------------------------------------------------------
-// 6) Minimal debug (safe preview)
+// 7) Debug safe preview
 // ---------------------------------------------------------
 try {
   const preview =
@@ -137,9 +132,7 @@ try {
       ? `${ENV.DATABASE_URL.slice(0, 60)}...`
       : "[not set]";
   console.log(`DATABASE_URL loaded (preview): ${preview}`);
-} catch {
-  // swallow preview errors
-}
+} catch {}
 
-// Export default for compatibility with default imports
+// Default export
 export default ENV;

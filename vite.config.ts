@@ -1,6 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const crypto = require("crypto");
 
 export default defineConfig({
   // Operate from /client
@@ -13,6 +17,8 @@ export default defineConfig({
     "import.meta.env.VITE_API_URL": JSON.stringify(
       process.env.VITE_API_URL || "https://api.lifebridge.online"
     ),
+    // ✅ Ensure crypto works in Netlify/Vite build
+    crypto,
   },
 
   resolve: {
@@ -24,7 +30,7 @@ export default defineConfig({
   },
 
   build: {
-    // ✅ Output stays inside /app/dist/client
+    // ✅ Output stays inside /dist/client
     outDir: resolve(__dirname, "dist/client"),
     emptyOutDir: true,
     rollupOptions: {

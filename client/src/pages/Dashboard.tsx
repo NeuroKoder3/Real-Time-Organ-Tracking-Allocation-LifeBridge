@@ -35,9 +35,12 @@ function OrganViabilityCard({ organ }: { organ: Organ }) {
       (1000 * 60 * 60)
   );
   const remainingHours = totalHours - elapsedHours;
-  const progressPercentage = (remainingHours / totalHours) * 100;
+  const progressPercentage = Math.max(
+    0,
+    Math.min(100, (remainingHours / totalHours) * 100)
+  );
 
-  const urgencyColor =
+  const urgencyColor: "default" | "secondary" | "destructive" =
     remainingHours < 2 ? "destructive" : remainingHours < 4 ? "secondary" : "default";
 
   return (
@@ -119,7 +122,7 @@ function StatsCard({
   title: string;
   value: string | number;
   description: string;
-  icon: any;
+  icon: React.ElementType;
   trend?: { value: number; isPositive: boolean };
 }) {
   return (

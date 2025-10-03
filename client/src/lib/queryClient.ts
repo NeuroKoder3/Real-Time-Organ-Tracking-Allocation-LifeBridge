@@ -8,45 +8,27 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// 🌐 Generic API request helper
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
-}
-
-// ⚙️ Typed query function generator with 401 behavior
 type UnauthorizedBehavior = "returnNull" | "throw";
 
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401 }) =>
-  async ({ queryKey }) => {
+// ⚙️ Properly generic query function factory
+export function getQueryFn<T = unknown>({ on401 }: { on401: UnauthorizedBehavior }): QueryFunction<T> {
+  return async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
     });
 
     if (on401 === "returnNull" && res.status === 401) {
-      return null as any;
+      return null as T;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+
+    return (await res.json()) as T;
   };
+}
 
 // ✅ Shared React Query Client instance
-export const queryClient = new QueryClient({
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
@@ -61,5 +43,4 @@ export const queryClient = new QueryClient({
   },
 });
 
-// auto-fix: provide default export for compatibility with default imports
-export default apiRequest;
+export default queryClient;

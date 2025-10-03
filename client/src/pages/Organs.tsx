@@ -11,9 +11,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Heart, Plus, Clock, MapPin, Edit, Trash2, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import queryClient from "@/lib/queryClient"; // ✅ fixed import
 import { useToast } from "@/hooks/use-toast";
 import type { Organ } from "@shared/schema";
 import { api } from "@/lib/api";
@@ -75,14 +77,12 @@ function OrganCard({
       )
     : 100;
 
-  // ✅ Strictly type urgency colors
   const urgencyColors: Record<UrgencyLevel, BadgeVariant> = {
     critical: "destructive",
     warning: "secondary",
     normal: "default",
   };
 
-  // ✅ Status → Badge variant
   const statusColors: Record<string, BadgeVariant> = {
     available: "default",
     allocated: "secondary",
@@ -324,10 +324,71 @@ export default function Organs() {
                   : "Enter organ details for inventory tracking"}
               </DialogDescription>
             </DialogHeader>
-            {/* Form fields go here */}
-            <Button onClick={handleSubmit} className="w-full mt-4">
-              {editingOrgan ? "Update Organ" : "Add Organ"}
-            </Button>
+
+            {/* ✅ Actual form fields */}
+            <div className="space-y-3">
+              <div>
+                <Label>Organ Type</Label>
+                <Input
+                  value={formData.organType}
+                  onChange={(e) => setFormData({ ...formData, organType: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Blood Type</Label>
+                <Input
+                  value={formData.bloodType}
+                  onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Donor ID</Label>
+                <Input
+                  value={formData.donorId}
+                  onChange={(e) => setFormData({ ...formData, donorId: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Current Location</Label>
+                <Input
+                  value={formData.currentLocation}
+                  onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Viability Hours</Label>
+                <Input
+                  type="number"
+                  value={formData.viabilityHours}
+                  onChange={(e) =>
+                    setFormData({ ...formData, viabilityHours: parseInt(e.target.value, 10) })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label>HLA Markers</Label>
+                <Input
+                  value={formData.hlaMarkers}
+                  onChange={(e) => setFormData({ ...formData, hlaMarkers: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Special Requirements</Label>
+                <Input
+                  value={formData.specialRequirements}
+                  onChange={(e) =>
+                    setFormData({ ...formData, specialRequirements: e.target.value })
+                  }
+                />
+              </div>
+              <Button onClick={handleSubmit} className="w-full mt-4">
+                {editingOrgan ? "Update Organ" : "Add Organ"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

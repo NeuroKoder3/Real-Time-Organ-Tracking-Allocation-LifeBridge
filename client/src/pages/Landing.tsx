@@ -15,6 +15,12 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
+type Feature = {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+};
+
 export default function Landing() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -23,7 +29,7 @@ export default function Landing() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const features = [
+  const features: Feature[] = [
     {
       icon: Heart,
       title: "Real-Time Organ Tracking",
@@ -62,7 +68,7 @@ export default function Landing() {
     },
   ];
 
-  const benefits = [
+  const benefits: string[] = [
     "Reduce the 28,000+ annual organ discards",
     "Save hundreds more lives annually",
     "50% reduction in coordination time",
@@ -80,6 +86,21 @@ export default function Landing() {
       navigate("/dashboard");
     } catch {
       setError("Login failed. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setEmail("demo@lifebridge.com");
+    setPassword("password123");
+    setError("");
+    setLoading(true);
+    try {
+      await login("demo@lifebridge.com", "password123");
+      navigate("/dashboard");
+    } catch {
+      setError("Demo login failed. Please check backend configuration.");
     } finally {
       setLoading(false);
     }
@@ -125,6 +146,7 @@ export default function Landing() {
                 <Input
                   type="email"
                   placeholder="Email"
+                  aria-label="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -132,6 +154,7 @@ export default function Landing() {
                 <Input
                   type="password"
                   placeholder="Password"
+                  aria-label="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -139,8 +162,26 @@ export default function Landing() {
                 {error && (
                   <p className="text-red-600 text-sm text-center">{error}</p>
                 )}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                  aria-label="Sign In Button"
+                >
                   {loading ? "Signing in..." : "Sign In"}
+                </Button>
+
+                {/* Demo Login Button */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDemoLogin}
+                  disabled={loading}
+                  aria-label="Demo Login Button"
+                  data-testid="button-demo-login"
+                >
+                  🚀 Demo Login
                 </Button>
               </form>
             </CardContent>

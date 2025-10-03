@@ -3,14 +3,14 @@
 // ---------------------------------------------------------
 // ✅ Load environment variables FIRST
 // ---------------------------------------------------------
-import "./config/env";
+import "./config/env.js";
 
 // ---------------------------------------------------------
 // Imports AFTER env is loaded
 // ---------------------------------------------------------
 import pkg from "pg"; // 👈 Correct import for Pool from pg
 import { drizzle } from "drizzle-orm/node-postgres"; // 👈 drizzle adapter for pg
-import * as schema from "../shared/schema"; // fixed: removed .js extension
+import * as schema from "../shared/schema.js";
 
 const { Pool } = pkg; // Destructure Pool from pg import
 

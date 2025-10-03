@@ -1,3 +1,5 @@
+// server/routes.ts
+
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 
@@ -6,7 +8,7 @@ import createRBACStorage from "./rbacStorage.js";
 import createManualAuditLog from "./auditMiddleware.js";
 import { enrichUserWithRole, withPermissions } from "./permissionMiddleware.js";
 import type { AuthenticatedRequest } from "./types.js";
-import type { UserRole } from "../shared/schema";
+import type { UserRole } from "../shared/schema.js";
 import authenticateToken from "./authMiddleware.js";
 import authRoutes from "./authRoutes.js";
 import unosService from "./integrations/unosService.js";
@@ -28,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        const storage = new createRBACStorage(
+        const storage = createRBACStorage(
           baseStorage,
           (user?.role as UserRole) || "coordinator",
           userId
@@ -90,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/organs", authenticateToken, ...withPermissions("organs", "read"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
       const organs = await storage.getOrgans();
       res.json(organs);
     } catch (error) {
@@ -102,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/organs/:id", authenticateToken, ...withPermissions("organs", "read"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
       const organ = await storage.getOrgan(req.params.id);
       if (!organ) return res.status(404).json({ message: "Organ not found" });
       res.json(organ);
@@ -115,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/organs", authenticateToken, ...withPermissions("organs", "create"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
 
       const data = {
         ...req.body,
@@ -134,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/organs/:id", authenticateToken, ...withPermissions("organs", "update"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
       const organ = await storage.updateOrgan(req.params.id, req.body);
       res.json(organ);
     } catch (error) {
@@ -146,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/organs/:id", authenticateToken, ...withPermissions("organs", "delete"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
       await storage.updateOrgan(req.params.id, { status: "discarded" });
       res.json({ success: true });
     } catch (error) {
@@ -158,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recipients", authenticateToken, ...withPermissions("recipients", "read"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
       const recipients = await storage.getRecipients();
       res.json(recipients);
     } catch (error) {
@@ -170,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/recipients", authenticateToken, ...withPermissions("recipients", "create"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const storage = new createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
 
       const data = {
         firstName: req.body.name?.split(" ")[0] || req.body.firstName,
@@ -301,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { user } = req as AuthenticatedRequest;
       const dbUser = await baseStorage.getUser(user?.claims?.sub || "");
       if (dbUser?.role !== "admin") {
-        await createManualAuditLog(req, "unauthorized_access", {
+        await createManualAuditLog(req as AuthenticatedRequest, "unauthorized_access", {
           entityType: "auditLogs",
           entityId: "",
           success: false,

@@ -19,10 +19,19 @@ export default function NotFound() {
             The page you’re looking for doesn’t exist or may have been moved.
           </p>
 
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button
+              onClick={() => navigate(-1)}
+              data-testid="button-go-back"
+              variant="secondary"
+              aria-label="Go Back"
+            >
+              Go Back
+            </Button>
             <Button
               onClick={() => navigate("/dashboard")}
               data-testid="button-go-dashboard"
+              aria-label="Go to Dashboard"
             >
               Go to Dashboard
             </Button>
@@ -30,6 +39,7 @@ export default function NotFound() {
               variant="outline"
               onClick={() => navigate("/")}
               data-testid="button-go-login"
+              aria-label="Go to Login"
             >
               Login
             </Button>

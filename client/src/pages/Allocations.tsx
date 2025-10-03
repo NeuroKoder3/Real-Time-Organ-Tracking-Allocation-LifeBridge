@@ -32,7 +32,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import queryClient from "@/lib/queryClient"; // ✅ FIXED: default import
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { Allocation, Organ, Recipient } from "@shared/schema";

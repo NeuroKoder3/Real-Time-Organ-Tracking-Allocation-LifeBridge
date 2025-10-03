@@ -28,7 +28,8 @@ import {
   Trash2,
   Activity,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import queryClient from "@/lib/queryClient";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -220,6 +221,15 @@ export default function Recipients() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
 
+  const [formData, setFormData] = useState({
+    name: "",
+    bloodType: "",
+    organNeeded: "",
+    urgencyLevel: "routine",
+    hospital: "",
+    status: "active",
+  });
+
   const { data: recipients = [], isLoading } = useQuery({
     queryKey: ["/api/recipients"],
     queryFn: async () => {
@@ -228,14 +238,62 @@ export default function Recipients() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: (data: typeof formData) =>
+      api("/api/recipients", { method: "POST", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      toast({ title: "Recipient Added" });
+      setIsAddDialogOpen(false);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) =>
+      api(`/api/recipients/${data.id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      toast({ title: "Recipient Updated" });
+      setIsAddDialogOpen(false);
+      setEditingRecipient(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api(`/api/recipients/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
+      toast({ title: "Recipient Removed" });
+    },
+  });
+
   const handleEdit = (recipient: UiRecipient) => {
     setEditingRecipient(recipient);
+    setFormData({
+      name: recipient.name,
+      bloodType: recipient.bloodType,
+      organNeeded: recipient.organNeeded,
+      urgencyLevel: recipient.urgencyLevel,
+      hospital: recipient.hospital || "",
+      status: recipient.status,
+    });
     setIsAddDialogOpen(true);
   };
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to remove this recipient from the waitlist?")) {
-      toast({ title: "Recipient Removed", description: `Recipient ${id} removed.` });
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (editingRecipient) {
+      updateMutation.mutate({ id: editingRecipient.id, ...formData });
+    } else {
+      createMutation.mutate(formData);
     }
   };
 
@@ -283,6 +341,60 @@ export default function Recipients() {
                   : "Enter recipient details for the waitlist"}
               </DialogDescription>
             </DialogHeader>
+
+            {/* ✅ Form fields */}
+            <div className="space-y-3">
+              <Input
+                placeholder="Name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+              <Input
+                placeholder="Blood Type"
+                value={formData.bloodType}
+                onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
+              />
+              <Input
+                placeholder="Organ Needed"
+                value={formData.organNeeded}
+                onChange={(e) => setFormData({ ...formData, organNeeded: e.target.value })}
+              />
+              <Input
+                placeholder="Hospital"
+                value={formData.hospital}
+                onChange={(e) => setFormData({ ...formData, hospital: e.target.value })}
+              />
+              <Select
+                value={formData.urgencyLevel}
+                onValueChange={(v) => setFormData({ ...formData, urgencyLevel: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Urgency Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="routine">Routine</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={formData.status}
+                onValueChange={(v) => setFormData({ ...formData, status: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="matched">Matched</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button className="w-full mt-2" onClick={handleSubmit}>
+                {editingRecipient ? "Update Recipient" : "Add Recipient"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

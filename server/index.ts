@@ -13,7 +13,7 @@ if (fs.existsSync(".env")) {
 }
 
 // Must come after dotenv
-import "./config/env";
+import "./config/env.js";
 
 // ✅ Validate critical environment variables (warn instead of hard-crash in prod)
 const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"] as const;

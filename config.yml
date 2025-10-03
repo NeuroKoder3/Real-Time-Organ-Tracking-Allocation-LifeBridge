@@ -1,0 +1,8 @@
+tunnel: 511d9227-362c-49eb-a4a6-29fd2c49e9d7
+credentials-file: C:\Users\User\.cloudflared\511d9227-362c-49eb-a4a6-29fd2c49e9d7.json
+
+ingress:
+  - hostname: api.lifebridge.online
+    service: http://localhost:5174     # 👈 your Express server port
+
+  - service: http_status:404

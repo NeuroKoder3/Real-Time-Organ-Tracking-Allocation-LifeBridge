@@ -173,14 +173,12 @@ export function auditMiddleware(
 }
 
 // ---------------------------------------------------------
-// Manual audit helper
+// Manual audit helper (simplified to match real usage)
 // ---------------------------------------------------------
 export async function createManualAuditLog(
   req: AuthenticatedRequest,
   action: string,
-  entityType: string,
-  entityId: string,
-  additionalData: Partial<InsertAuditLog> = {},
+  details: Partial<InsertAuditLog> = {}
 ) {
   const auditLogData: InsertAuditLog = {
     userId: req.user?.claims?.sub || null,
@@ -194,11 +192,11 @@ export async function createManualAuditLog(
     endpoint: req.path,
     action,
     actionCategory: determineActionCategory(action),
-    entityType,
-    entityId,
-    phiAccessed: true,
-    success: true,
-    ...additionalData,
+    entityType: details.entityType || "unknown",
+    entityId: details.entityId || "",
+    phiAccessed: details.phiAccessed ?? true,
+    success: details.success ?? true,
+    ...details,
   };
   return storage.createAuditLog(auditLogData);
 }

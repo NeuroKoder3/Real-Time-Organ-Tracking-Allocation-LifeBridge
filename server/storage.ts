@@ -40,7 +40,7 @@ import db from "./db.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto"; // (currently unused, kept as-is)
 import { encryptionService, PHI_FIELDS } from "./encryptionService.js";
-import "./config/env";
+import "./config/env.js";
 
 // Interface for storage operations
 export interface IStorage {

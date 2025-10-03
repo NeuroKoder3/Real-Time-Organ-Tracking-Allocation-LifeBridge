@@ -10,7 +10,7 @@ import {
   type SpecialOperation,
   type EntityType,
 } from "./permissions.js";
-import createManualAuditLog from "./auditMiddleware.js";
+import { createManualAuditLog } from "./auditMiddleware.js"; // ✅ FIXED LINE
 import type { AuthenticatedRequest } from "./types.js";
 
 // ---------------------------------------------------------
@@ -104,7 +104,7 @@ export function requirePermission(
 
       if (!userRole) {
         await createManualAuditLog(
-          req as AuthenticatedRequest,
+          req,
           "unauthorized_access",
           {
             entityType: entityType || getEntityTypeFromPath(req.path),
@@ -127,7 +127,7 @@ export function requirePermission(
 
       if (specialOp && !hasSpecialPermission(userRole, specialOp)) {
         await createManualAuditLog(
-          req as AuthenticatedRequest,
+          req,
           "unauthorized_special_operation",
           {
             entityType: finalEntityType,
@@ -151,7 +151,7 @@ export function requirePermission(
         !hasPermission(userRole, finalEntityType as EntityType, finalOperation)
       ) {
         await createManualAuditLog(
-          req as AuthenticatedRequest,
+          req,
           "unauthorized_access",
           {
             entityType: finalEntityType,
@@ -180,7 +180,7 @@ export function requirePermission(
         );
         if (!validation.valid) {
           await createManualAuditLog(
-            req as AuthenticatedRequest,
+            req,
             "unauthorized_field_update",
             {
               entityType: finalEntityType,

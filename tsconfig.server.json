@@ -1,14 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "include": ["server/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "client", "dist", "build"],
+  "exclude": ["node_modules", "client", "build"],
   "compilerOptions": {
-    "outDir": "./dist/server",
-    "rootDir": ".",
-    "noEmit": false,                  // ✅ emit compiled output
-    "module": "NodeNext",             // ✅ must match moduleResolution
-    "moduleResolution": "NodeNext",   // ✅ Node ESM resolution
-    "target": "ES2022",               // ✅ modern JS
+    "outDir": "./dist",
+    "rootDir": ".", // <-- revert this
+    "noEmit": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
     "lib": ["esnext"],
     "esModuleInterop": true,
     "skipLibCheck": true,

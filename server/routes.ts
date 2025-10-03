@@ -2,10 +2,9 @@
 
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-
 import { storage as baseStorage } from "./storage.js";
-import createRBACStorage from "./rbacStorage.js";
-import createManualAuditLog from "./auditMiddleware.js";
+import { createRBACStorage } from "./rbacStorage.js"; // ✅ RBAC everywhere
+import { createManualAuditLog } from "./auditMiddleware.js"; // ✅ FIXED LINE
 import { enrichUserWithRole, withPermissions } from "./permissionMiddleware.js";
 import type { AuthenticatedRequest } from "./types.js";
 import type { UserRole } from "../shared/schema.js";
@@ -14,6 +13,7 @@ import authRoutes from "./authRoutes.js";
 import unosService from "./integrations/unosService.js";
 import complianceReports from "./complianceReports.js";
 import complianceStatus from "./complianceStatus.js";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/auth", authRoutes);
@@ -89,6 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/compliance", complianceReports);
   app.use("/api/compliance", complianceStatus);
 
+  // ---------------- ORGANS ----------------
   app.get("/api/organs", authenticateToken, ...withPermissions("organs", "read"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
@@ -157,6 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ---------------- RECIPIENTS ----------------
   app.get("/api/recipients", authenticateToken, ...withPermissions("recipients", "read"), async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
@@ -200,9 +202,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/recipients/:id", authenticateToken, async (req: Request, res: Response) => {
+  app.put("/api/recipients/:id", authenticateToken, ...withPermissions("recipients", "update"), async (req: Request, res: Response) => {
     try {
-      const recipient = await baseStorage.updateRecipient(req.params.id, req.body);
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const recipient = await storage.updateRecipient(req.params.id, req.body);
       res.json(recipient);
     } catch (error) {
       console.error("Error updating recipient:", error);
@@ -210,9 +214,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/recipients/:id", authenticateToken, async (req: Request, res: Response) => {
+  app.delete("/api/recipients/:id", authenticateToken, ...withPermissions("recipients", "delete"), async (req: Request, res: Response) => {
     try {
-      await baseStorage.updateRecipient(req.params.id, { status: "inactive" });
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      await storage.updateRecipient(req.params.id, { status: "inactive" });
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting recipient:", error);
@@ -220,9 +226,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/allocations", authenticateToken, async (_req: Request, res: Response) => {
+  // ---------------- ALLOCATIONS ----------------
+  app.get("/api/allocations", authenticateToken, ...withPermissions("allocations", "read"), async (req: Request, res: Response) => {
     try {
-      const allocations = await baseStorage.getAllocations();
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const allocations = await storage.getAllocations();
       res.json(allocations);
     } catch (error) {
       console.error("Error fetching allocations:", error);
@@ -230,8 +239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/allocations", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/allocations", authenticateToken, ...withPermissions("allocations", "create"), async (req: Request, res: Response) => {
     try {
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+
       const data = {
         ...req.body,
         matchScore: req.body.matchScore?.toString() || "0",
@@ -239,8 +251,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "proposed",
       };
 
-      const allocation = await baseStorage.createAllocation(data);
-      await baseStorage.updateOrgan(data.organId, { status: "matched" });
+      const allocation = await storage.createAllocation(data);
+      await storage.updateOrgan(data.organId, { status: "matched" });
 
       const unosResponse = await unosService.sendAllocationRequest({
         organId: data.organId,
@@ -255,9 +267,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transports", authenticateToken, async (_req: Request, res: Response) => {
+  // ---------------- TRANSPORTS ----------------
+  app.get("/api/transports", authenticateToken, ...withPermissions("transports", "read"), async (req: Request, res: Response) => {
     try {
-      const transports = await baseStorage.getTransports();
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const transports = await storage.getTransports();
       res.json(transports);
     } catch (error) {
       console.error("Error fetching transports:", error);
@@ -265,9 +280,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/messages", authenticateToken, async (req: Request, res: Response) => {
+  // ---------------- MESSAGES ----------------
+  app.get("/api/messages", authenticateToken, ...withPermissions("messages", "read"), async (req: Request, res: Response) => {
     try {
-      const messages = await baseStorage.getMessages(
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const messages = await storage.getMessages(
         req.query.allocationId as string,
         req.query.transportId as string
       );
@@ -278,9 +296,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/metrics", authenticateToken, async (req: Request, res: Response) => {
+  // ---------------- METRICS ----------------
+  app.get("/api/metrics", authenticateToken, ...withPermissions("metrics", "read"), async (req: Request, res: Response) => {
     try {
-      const metrics = await baseStorage.getMetrics(req.query.period as string);
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const metrics = await storage.getMetrics(req.query.period as string);
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching metrics:", error);
@@ -288,9 +309,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/donors", authenticateToken, async (_req: Request, res: Response) => {
+  // ---------------- DONORS ----------------
+  app.get("/api/donors", authenticateToken, ...withPermissions("donors", "read"), async (req: Request, res: Response) => {
     try {
-      const donors = await baseStorage.getDonors();
+      const { user } = req as AuthenticatedRequest;
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const donors = await storage.getDonors();
       res.json(donors);
     } catch (error) {
       console.error("Error fetching donors:", error);
@@ -298,10 +322,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ---------------- AUDIT LOGS ----------------
   app.get("/api/audit-logs", authenticateToken, async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
-      const dbUser = await baseStorage.getUser(user?.claims?.sub || "");
+      const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);
+      const dbUser = await storage.getUser(user?.claims?.sub || "");
       if (dbUser?.role !== "admin") {
         await createManualAuditLog(req as AuthenticatedRequest, "unauthorized_access", {
           entityType: "auditLogs",
@@ -313,7 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         return res.status(403).json({ message: "Forbidden: Admin access required" });
       }
-      const auditLogs = await baseStorage.getAuditLogs({});
+      const auditLogs = await storage.getAuditLogs({});
       res.json(auditLogs);
     } catch (error) {
       console.error("Error fetching audit logs:", error);

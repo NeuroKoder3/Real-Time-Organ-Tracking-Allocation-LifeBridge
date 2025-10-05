@@ -2,7 +2,7 @@
 
 [build]
   command = "pnpm install --frozen-lockfile && pnpm run build:client"
-  publish = "dist/client"
+  publish = "client/dist"
 
 [build.environment]
   NODE_ENV = "production"

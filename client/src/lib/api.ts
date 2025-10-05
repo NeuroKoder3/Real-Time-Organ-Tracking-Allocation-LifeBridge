@@ -1,6 +1,6 @@
 /**
- * A typed API fetch wrapper with automatic JWT handling
- * and error management.
+ * 🌐 API Utility for LifeBridge
+ * Handles authentication, JWT headers, CORS, and consistent error reporting.
  */
 
 const BASE_URL =
@@ -8,13 +8,28 @@ const BASE_URL =
     ? "http://localhost:5000"
     : import.meta.env.VITE_API_URL?.trim() || "";
 
-// Debug: Log the resolved base URL at runtime
-console.log("🧪 BASE_URL at runtime:", BASE_URL);
+// ✅ Log only in development
+if (import.meta.env.DEV) {
+  console.log("🧪 [API] BASE_URL:", BASE_URL);
+}
 
 if (!BASE_URL) {
   console.error(
-    "[API] ❌ VITE_API_URL is not defined. API calls will fail in production!"
+    "[API] ❌ VITE_API_URL is missing. Set it in your environment (e.g., Netlify dashboard)."
   );
+}
+
+/**
+ * Helper to safely parse JSON (prevents crashes on malformed responses)
+ */
+async function safeJsonParse<T>(res: Response): Promise<T | null> {
+  try {
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -30,41 +45,53 @@ export async function api<T = unknown>(
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    ...(options.headers || {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
+  // ✅ Force credentials for cross-domain cookies (CORS safe)
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers,
+    credentials: "include",
   };
 
   try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      ...options,
-      headers,
-    });
+    const response = await fetch(`${BASE_URL}${path}`, fetchOptions);
 
-    if (res.status === 401) {
-      // Handle invalid/expired token
+    // 🔐 Handle expired session or unauthorized token
+    if (response.status === 401) {
+      console.warn("[API] Session expired — redirecting to login.");
       localStorage.removeItem("lifebridge_user");
       window.location.href = "/";
-      throw new Error("Unauthorized — please log in again.");
+      throw new Error("Unauthorized: please sign in again.");
     }
 
-    if (res.status === 304) {
-      // Optional: handle 304 responses if your app expects caching behavior
-      console.warn(`ℹ️ API response 304 - Not Modified: ${path}`);
+    if (response.status === 204) {
+      // No content
       return {} as T;
     }
 
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("❌ API Error:", res.status, text);
-      throw new Error(`API error ${res.status}: ${text}`);
+    if (response.status === 304) {
+      // Not Modified (e.g., caching scenario)
+      if (import.meta.env.DEV)
+        console.info(`ℹ️ [API] 304 Not Modified: ${path}`);
+      return {} as T;
     }
 
-    return (await res.json()) as T;
+    if (!response.ok) {
+      const errorText = await response.text();
+      const message = errorText || `HTTP ${response.status}`;
+      console.error(`❌ [API] Request failed (${response.status}): ${message}`);
+      throw new Error(message);
+    }
+
+    const data = await safeJsonParse<T>(response);
+    return (data ?? {}) as T;
   } catch (error) {
-    console.error("❌ Network or runtime error in API call:", error);
+    console.error("🚨 [API] Network or runtime error:", error);
     throw error;
   }
 }
 
-// auto-fix: provide default export for compatibility with default imports
 export default api;

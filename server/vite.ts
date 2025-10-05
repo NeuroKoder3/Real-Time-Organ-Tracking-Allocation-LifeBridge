@@ -1,17 +1,16 @@
 // server/vite.ts
-import express, { type Express } from "express";
+import express, { Express } from "express";
 import fs from "fs";
-import { resolve } from "path";
-import { createServer as createViteServer, createLogger, type InlineConfig } from "vite";
-import { type Server } from "http";
+import path, { resolve } from "path";
+import { createServer as createViteServer, createLogger, InlineConfig, ViteDevServer } from "vite";
 import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
 /**
- * Simple timestamped logger
+ * ✅ Timestamped logger
  */
-export function log(message: string, source = "express") {
+export function log(message: string, source: string = "express"): void {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -22,33 +21,32 @@ export function log(message: string, source = "express") {
 }
 
 /**
- * Try to load the root vite config (works for vite.config.ts or .js)
+ * ✅ Load vite.config.{ts,js}, or fallback inline config
  */
 async function loadViteConfig(): Promise<InlineConfig> {
   const root = process.cwd();
   const tsPath = resolve(root, "vite.config.ts");
   const jsPath = resolve(root, "vite.config.js");
 
-  // Prefer TS config
   if (fs.existsSync(tsPath)) {
     try {
       const mod = await import(tsPath);
-      return (mod as any).default ?? (mod as any);
-    } catch (e) {
-      viteLogger.warn(`Could not import ${tsPath}: ${(e as Error)?.message}`);
+      return mod.default ?? mod;
+    } catch (e: any) {
+      viteLogger.warn(`Could not import ${tsPath}: ${e?.message}`);
     }
   }
 
   if (fs.existsSync(jsPath)) {
     try {
       const mod = await import(jsPath);
-      return (mod as any).default ?? (mod as any);
-    } catch (e) {
-      viteLogger.warn(`Could not import ${jsPath}: ${(e as Error)?.message}`);
+      return mod.default ?? mod;
+    } catch (e: any) {
+      viteLogger.warn(`Could not import ${jsPath}: ${e?.message}`);
     }
   }
 
-  // Fallback: minimal inline config
+  // Fallback
   viteLogger.warn("No vite.config.ts/js found. Using inline defaults.");
   return {
     root: resolve(root, "client"),
@@ -59,26 +57,26 @@ async function loadViteConfig(): Promise<InlineConfig> {
 }
 
 /**
- * Development: attach Vite middlewares
+ * ✅ Dev mode — attach Vite middleware
  */
-export async function setupVite(app: Express, server: Server) {
+export async function setupVite(app: Express, server: any): Promise<void> {
   const cfg = await loadViteConfig();
 
-  const vite = await createViteServer({
-    ...(cfg as InlineConfig),
-    configFile: false, // we already loaded/merged config
+  const vite: ViteDevServer = await createViteServer({
+    ...cfg,
+    configFile: false,
     server: {
-      ...(cfg as InlineConfig).server,
+      ...cfg.server,
       middlewareMode: true,
       hmr: { server },
-      allowedHosts: true as const,
+      allowedHosts: true,
     },
     appType: "custom",
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
         viteLogger.error(msg, options);
-        // Don't crash dev server; just log
+        // Don’t crash dev server
       },
     },
   });
@@ -86,32 +84,28 @@ export async function setupVite(app: Express, server: Server) {
   app.use(vite.middlewares);
 
   app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
     try {
       const clientTemplate = resolve(process.cwd(), "client", "index.html");
-
-      // Always reload index.html (so changes are reflected in dev)
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
+
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
       );
 
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
+      const html = await vite.transformIndexHtml(req.originalUrl, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(html);
+    } catch (e: any) {
+      vite.ssrFixStacktrace(e);
       next(e);
     }
   });
 }
 
 /**
- * Production: serve built static assets
- * NOTE: SPA fallback is handled in index.ts to avoid route order conflicts.
+ * ✅ Production mode — serve built static assets
  */
-export function serveStatic(app: Express) {
-  // Fixed path: client/dist
+export function serveStatic(app: Express): void {
   const clientDir = resolve(process.cwd(), "client", "dist");
 
   if (!fs.existsSync(clientDir)) {
@@ -120,7 +114,7 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Cache immutable assets aggressively
+  // Cache immutable static assets
   app.use((req, res, next) => {
     if (req.path.startsWith("/assets/")) {
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -128,7 +122,7 @@ export function serveStatic(app: Express) {
     next();
   });
 
-  // Serve static files with correct MIME types; don't auto-serve index.html here.
+  // Serve built files
   app.use(
     express.static(clientDir, {
       index: false,
@@ -139,5 +133,9 @@ export function serveStatic(app: Express) {
   log(`[Static] Serving client build from ${clientDir}`);
 }
 
-// Default export for compatibility
-export default { setupVite, serveStatic, log };
+// Export defaults for compatibility
+export default {
+  setupVite,
+  serveStatic,
+  log,
+};

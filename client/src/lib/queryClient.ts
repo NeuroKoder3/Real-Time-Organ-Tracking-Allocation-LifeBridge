@@ -1,6 +1,8 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// 🛡️ Throw detailed error if fetch fails
+/**
+ * 🛡️ Utility — throw if response not OK, with readable message
+ */
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -10,11 +12,32 @@ async function throwIfResNotOk(res: Response) {
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 
-// ⚙️ Properly generic query function factory
-export function getQueryFn<T = unknown>({ on401 }: { on401: UnauthorizedBehavior }): QueryFunction<T> {
+/**
+ * ⚙️ Generic Query Function Factory
+ * Automatically prefixes your backend API base URL
+ * and handles unauthorized responses gracefully.
+ */
+export function getQueryFn<T = unknown>({
+  on401,
+}: {
+  on401: UnauthorizedBehavior;
+}): QueryFunction<T> {
   return async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const path = queryKey[0] as string;
+
+    // ✅ Respect production / development base URL
+    const BASE_URL =
+      import.meta.env.MODE === "development"
+        ? "http://localhost:5000"
+        : import.meta.env.VITE_API_URL?.trim() || "";
+
+    const url = path.startsWith("http") ? path : `${BASE_URL}${path}`;
+
+    const res = await fetch(url, {
       credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
 
     if (on401 === "returnNull" && res.status === 401) {
@@ -27,15 +50,17 @@ export function getQueryFn<T = unknown>({ on401 }: { on401: UnauthorizedBehavior
   };
 }
 
-// ✅ Shared React Query Client instance
+/**
+ * ✅ Shared React Query Client Instance
+ * Centralized across all hooks, ensuring caching and consistency.
+ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 1000 * 60 * 5, // 5 min (good balance for production)
+      retry: 1, // retry once before error
     },
     mutations: {
       retry: false,

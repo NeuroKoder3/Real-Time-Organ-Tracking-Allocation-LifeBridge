@@ -7,18 +7,17 @@ const require = createRequire(import.meta.url);
 const crypto = require("crypto");
 
 export default defineConfig({
-  // Operate from /client
+  // ✅ Root stays in /client for Vite
   root: resolve(__dirname, "client"),
 
   plugins: [react()],
 
-  // Hardcode env at build time
+  // ✅ Hardcode env at build time
   define: {
     "import.meta.env.VITE_API_URL": JSON.stringify(
       process.env.VITE_API_URL || "https://api.lifebridge.online"
     ),
-    // ✅ Ensure crypto works in Netlify/Vite build
-    crypto,
+    crypto, // allow crypto polyfill during build
   },
 
   resolve: {
@@ -30,8 +29,8 @@ export default defineConfig({
   },
 
   build: {
-    // ✅ Output stays inside /dist/client
-    outDir: resolve(__dirname, "dist/client"),
+    // ✅ Output inside client/dist (what server expects)
+    outDir: "dist", // relative to /client root → client/dist
     emptyOutDir: true,
     rollupOptions: {
       output: {

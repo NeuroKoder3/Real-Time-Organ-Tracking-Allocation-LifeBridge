@@ -14,6 +14,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+
+// -----------------------------
+// Environment + Config
+// -----------------------------
+const API_URL = import.meta.env.VITE_API_URL ?? window.location.origin;
 
 type Feature = {
   icon: React.ElementType;
@@ -24,6 +30,8 @@ type Feature = {
 export default function Landing() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,63 +42,78 @@ export default function Landing() {
       icon: Heart,
       title: "Real-Time Organ Tracking",
       description:
-        "Live organ inventory with viability countdown timers. Track hearts (4-6 hrs), kidneys (24-36 hrs), and all organ types with precision.",
+        "Live organ inventory with viability countdown timers. Track hearts (4–6 hrs), kidneys (24–36 hrs), and more.",
     },
     {
       icon: Users,
       title: "Intelligent Recipient Matching",
       description:
-        "AI-powered recipient ranking based on medical compatibility, geography, wait time, and UNOS allocation policies.",
+        "AI-powered recipient ranking based on medical compatibility, geography, and UNOS policies.",
     },
     {
       icon: Plane,
       title: "Transportation Management",
       description:
-        "Multi-modal transport coordination with real-time tracking, route optimization, and automatic backup planning.",
+        "Multi-modal transport coordination with real-time tracking, route optimization, and backup planning.",
     },
     {
       icon: MessageSquare,
-      title: "Multi-Stakeholder Hub",
+      title: "Secure Communication",
       description:
-        "HIPAA-compliant unified messaging for surgeons, coordinators, and transport teams with video conferencing.",
+        "HIPAA-compliant messaging for surgeons, coordinators, and transport teams with audit trail.",
     },
     {
       icon: MapPin,
       title: "GPS Chain of Custody",
       description:
-        "Real-time GPS tracking with temperature monitoring and digital chain of custody from procurement to transplant.",
+        "Real-time GPS tracking with temperature monitoring and custody verification from pickup to transplant.",
     },
     {
       icon: BarChart3,
       title: "Predictive Analytics",
       description:
-        "AI-driven demand forecasting, success probability modeling, and resource optimization for better outcomes.",
+        "AI-driven forecasting, success probability modeling, and resource optimization for better outcomes.",
     },
   ];
 
   const benefits: string[] = [
-    "Reduce the 28,000+ annual organ discards",
-    "Save hundreds more lives annually",
+    "Reduce 28,000+ annual organ discards",
+    "Save hundreds of additional lives yearly",
     "50% reduction in coordination time",
-    "Eliminate preventable transport delays",
+    "Eliminate transport delays",
     "Improve transplant success rates",
-    "Real-time visibility for all stakeholders",
+    "End-to-end transparency for all teams",
   ];
 
+  // -----------------------------
+  // Handle Login
+  // -----------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password.trim());
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to your dashboard...",
+      });
       navigate("/dashboard");
     } catch {
-      setError("Login failed. Please check your credentials.");
+      setError("Login failed. Please check your credentials or backend.");
+      toast({
+        title: "Authentication Failed",
+        description: "Please verify your credentials and try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  // -----------------------------
+  // Demo Login
+  // -----------------------------
   const handleDemoLogin = async () => {
     setEmail("demo@lifebridge.com");
     setPassword("password123");
@@ -98,14 +121,26 @@ export default function Landing() {
     setLoading(true);
     try {
       await login("demo@lifebridge.com", "password123");
+      toast({
+        title: "Demo Login Successful",
+        description: "Welcome to the LifeBridge demo dashboard.",
+      });
       navigate("/dashboard");
     } catch {
-      setError("Demo login failed. Please check backend configuration.");
+      setError("Demo login unavailable. Check backend API connection.");
+      toast({
+        title: "Demo Login Failed",
+        description: "Ensure demo credentials exist on the server.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  // -----------------------------
+  // Render Page
+  // -----------------------------
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
       {/* Header */}
@@ -115,6 +150,9 @@ export default function Landing() {
             <Heart className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">LifeBridge</h1>
           </div>
+          <span className="text-xs text-muted-foreground hidden sm:block">
+            {API_URL.replace(/^https?:\/\//, "")}
+          </span>
         </div>
       </header>
 
@@ -129,9 +167,8 @@ export default function Landing() {
             <span className="text-primary block">& Allocation Platform</span>
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Transform organ transplantation from fragmented phone calls into a
-            coordinated, data-driven system that maximizes the life-saving
-            potential of every donated organ.
+            Transform fragmented organ coordination into a secure,
+            data-driven ecosystem that maximizes every donation’s potential.
           </p>
         </div>
 
@@ -171,7 +208,6 @@ export default function Landing() {
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
 
-                {/* Demo Login Button */}
                 <Button
                   type="button"
                   variant="outline"
@@ -189,14 +225,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Features */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Core Platform Features</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Comprehensive platform for OPOs, transplant centers, and transport
-            teams to coordinate life-saving organ transplants with unprecedented
-            efficiency.
+            Empowering OPOs, transplant centers, and transport teams with
+            cutting-edge coordination and analytics tools.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -223,9 +258,9 @@ export default function Landing() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-8">Expected Impact</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
               {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-center gap-3 text-left">
+                <div key={index} className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                   <span>{benefit}</span>
                 </div>
@@ -237,10 +272,10 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t bg-background">
-        <div className="container mx-auto px-4 py-8 text-center text-muted-foreground">
+        <div className="container mx-auto px-4 py-8 text-center text-muted-foreground text-sm">
           <p>
-            &copy; 2025 LifeBridge. Real-time organ tracking and allocation
-            platform.
+            © {new Date().getFullYear()} LifeBridge — Real-time organ tracking
+            and allocation platform.
           </p>
         </div>
       </footer>

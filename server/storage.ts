@@ -38,20 +38,21 @@ import {
 
 import db from "./db.js";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { randomUUID } from "crypto"; // (currently unused, kept as-is)
 import { encryptionService, PHI_FIELDS } from "./encryptionService.js";
 import "./config/env.js";
 
 // Interface for storage operations
 export interface IStorage {
-  // Search operations for encrypted fields
+  // Search operations
   searchRecipientsByName(firstName?: string, lastName?: string): Promise<Recipient[]>;
   searchDonorsByLocation(location: string): Promise<Donor[]>;
   searchRecipientsByLocation(location: string): Promise<Recipient[]>;
 
-  // User operations for authentication
+  // User / auth operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: UpsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<UpsertUser>): Promise<User>;
 
   // Donor operations
   getDonors(): Promise<Donor[]>;
@@ -94,15 +95,15 @@ export interface IStorage {
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageRead(id: string): Promise<Message>;
 
-  // Chain of custody operations
+  // Chain of custody
   getCustodyLogs(organId: string): Promise<CustodyLog[]>;
   addCustodyLog(log: InsertCustodyLog): Promise<CustodyLog>;
 
-  // Metrics operations
+  // Metrics
   getMetrics(period?: string): Promise<Metric[]>;
   addMetric(metric: InsertMetric): Promise<Metric>;
 
-  // Audit logging operations - HIPAA compliant, immutable
+  // Audit logs
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   createAuthAuditLog(log: InsertAuthAuditLog): Promise<AuthAuditLog>;
   getAuditLogs(filter?: {
@@ -124,10 +125,10 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Search operations for encrypted fields
+  // Search operations (unchanged)
   async searchRecipientsByName(firstName?: string, lastName?: string): Promise<Recipient[]> {
     let query = db.select().from(recipients);
-    const conditions = [];
+    const conditions: any[] = [];
 
     if (firstName) {
       const encryptedFirstName = encryptionService.encryptDeterministic(firstName);
@@ -135,20 +136,16 @@ export class DatabaseStorage implements IStorage {
         conditions.push(eq(recipients.firstName, JSON.stringify(encryptedFirstName)));
       }
     }
-
     if (lastName) {
       const encryptedLastName = encryptionService.encryptDeterministic(lastName);
       if (encryptedLastName) {
         conditions.push(eq(recipients.lastName, JSON.stringify(encryptedLastName)));
       }
     }
-
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
     }
-
     const results = await query;
-
     return results.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
@@ -161,12 +158,10 @@ export class DatabaseStorage implements IStorage {
   async searchDonorsByLocation(location: string): Promise<Donor[]> {
     const encryptedLocation = encryptionService.encryptDeterministic(location);
     if (!encryptedLocation) return [];
-
     const results = await db
       .select()
       .from(donors)
       .where(eq(donors.location, JSON.stringify(encryptedLocation)));
-
     return results.map((donor: Donor) =>
       encryptionService.decryptObject(
         donor,
@@ -179,12 +174,10 @@ export class DatabaseStorage implements IStorage {
   async searchRecipientsByLocation(location: string): Promise<Recipient[]> {
     const encryptedLocation = encryptionService.encryptDeterministic(location);
     if (!encryptedLocation) return [];
-
     const results = await db
       .select()
       .from(recipients)
       .where(eq(recipients.location, JSON.stringify(encryptedLocation)));
-
     return results.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
@@ -194,47 +187,52 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  // User operations
+  // ========== USER / AUTH OPERATIONS ==========
+
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, userData.email || ""))
-      .limit(1);
-
-    if (existingUser.length > 0) {
-      const [user] = await db
-        .update(users)
-        .set({
-          ...userData,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.email, userData.email || ""))
-        .returning();
-      return user;
-    } else {
-      const [user] = await db.insert(users).values(userData).returning();
-      return user;
-    }
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
-  // Donor operations
+  async createUser(userData: UpsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(userData).returning();
+    return newUser;
+  }
+
+  async updateUser(id: string, updates: Partial<UpsertUser>): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  // ========== DONOR OPERATIONS ==========
   async getDonors(): Promise<Donor[]> {
     const donorsList = await db.select().from(donors).orderBy(desc(donors.createdAt));
     return donorsList.map((donor: Donor) =>
-      encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields)
+      encryptionService.decryptObject(
+        donor,
+        PHI_FIELDS.donors.fields,
+        PHI_FIELDS.donors.deterministicFields
+      )
     );
   }
 
   async getDonor(id: string): Promise<Donor | undefined> {
     const [donor] = await db.select().from(donors).where(eq(donors.id, id));
     if (donor) {
-      return encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields);
+      return encryptionService.decryptObject(
+        donor,
+        PHI_FIELDS.donors.fields,
+        PHI_FIELDS.donors.deterministicFields
+      );
     }
     return donor;
   }
@@ -246,7 +244,11 @@ export class DatabaseStorage implements IStorage {
       PHI_FIELDS.donors.deterministicFields
     );
     const [donor] = await db.insert(donors).values(encryptedData).returning();
-    return encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields);
+    return encryptionService.decryptObject(
+      donor,
+      PHI_FIELDS.donors.fields,
+      PHI_FIELDS.donors.deterministicFields
+    );
   }
 
   async updateDonor(id: string, updates: Partial<InsertDonor>): Promise<Donor> {
@@ -260,10 +262,14 @@ export class DatabaseStorage implements IStorage {
       .set({ ...encryptedUpdates, updatedAt: new Date() })
       .where(eq(donors.id, id))
       .returning();
-    return encryptionService.decryptObject(donor, PHI_FIELDS.donors.fields, PHI_FIELDS.donors.deterministicFields);
+    return encryptionService.decryptObject(
+      donor,
+      PHI_FIELDS.donors.fields,
+      PHI_FIELDS.donors.deterministicFields
+    );
   }
 
-  // Recipient operations
+  // ========== RECIPIENT OPERATIONS ==========
   async getRecipients(): Promise<Recipient[]> {
     const recipientsList = await db.select().from(recipients).orderBy(recipients.waitlistDate);
     return recipientsList.map((recipient: Recipient) =>
@@ -293,7 +299,6 @@ export class DatabaseStorage implements IStorage {
       .from(recipients)
       .where(and(eq(recipients.organNeeded, organType), eq(recipients.status, "waiting")))
       .orderBy(recipients.urgencyStatus, recipients.waitlistDate);
-
     return recipientsList.map((recipient: Recipient) =>
       encryptionService.decryptObject(
         recipient,
@@ -335,8 +340,7 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  // Rest of the code continues unchanged...
-  // Organ operations
+  // ========== ORGAN OPERATIONS ==========
   async getOrgans(): Promise<Organ[]> {
     return await db.select().from(organs).orderBy(desc(organs.createdAt));
   }
@@ -372,7 +376,7 @@ export class DatabaseStorage implements IStorage {
     return organ;
   }
 
-  // Allocation operations
+  // ========== ALLOCATION OPERATIONS ==========
   async getAllocations(): Promise<Allocation[]> {
     return await db.select().from(allocations).orderBy(desc(allocations.proposedAt));
   }
@@ -383,19 +387,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllocationsByOrgan(organId: string): Promise<Allocation[]> {
-    return await db
+    const results = await db
       .select()
       .from(allocations)
       .where(eq(allocations.organId, organId))
       .orderBy(allocations.priority);
+    return results;
   }
 
   async getAllocationsByRecipient(recipientId: string): Promise<Allocation[]> {
-    return await db
+    const results = await db
       .select()
       .from(allocations)
       .where(eq(allocations.recipientId, recipientId))
       .orderBy(desc(allocations.proposedAt));
+    return results;
   }
 
   async createAllocation(allocationData: InsertAllocation): Promise<Allocation> {
@@ -408,7 +414,7 @@ export class DatabaseStorage implements IStorage {
     return allocation;
   }
 
-  // Transport operations
+  // ========== TRANSPORT OPERATIONS ==========
   async getTransports(): Promise<Transport[]> {
     return await db.select().from(transports).orderBy(desc(transports.createdAt));
   }
@@ -419,11 +425,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveTransports(): Promise<Transport[]> {
-    return await db
+    const results = await db
       .select()
       .from(transports)
       .where(sql`${transports.status} IN ('scheduled', 'in_progress')`)
       .orderBy(transports.scheduledPickup);
+    return results;
   }
 
   async createTransport(transportData: InsertTransport): Promise<Transport> {
@@ -440,23 +447,17 @@ export class DatabaseStorage implements IStorage {
     return transport;
   }
 
-  // Message operations
+  // ========== MESSAGE OPERATIONS ==========
   async getMessages(allocationId?: string, transportId?: string): Promise<Message[]> {
     let query = db.select().from(messages);
-
     if (allocationId) {
       query = query.where(eq(messages.allocationId, allocationId)) as any;
     } else if (transportId) {
       query = query.where(eq(messages.transportId, transportId)) as any;
     }
-
     const messagesList = await query.orderBy(desc(messages.createdAt));
-    return messagesList.map((message: Message) =>
-      encryptionService.decryptObject(
-        message,
-        PHI_FIELDS.messages.fields,
-        PHI_FIELDS.messages.deterministicFields
-      )
+    return messagesList.map((msg: Message) =>
+      encryptionService.decryptObject(msg, PHI_FIELDS.messages.fields, PHI_FIELDS.messages.deterministicFields)
     );
   }
 
@@ -479,15 +480,11 @@ export class DatabaseStorage implements IStorage {
     return message;
   }
 
-  // Chain of custody operations
+  // ========== CHAIN OF CUSTODY ==========
   async getCustodyLogs(organId: string): Promise<CustodyLog[]> {
     const logs = await db.select().from(custodyLogs).where(eq(custodyLogs.organId, organId));
     return logs.map((log: CustodyLog) =>
-      encryptionService.decryptObject(
-        log,
-        PHI_FIELDS.custodyLogs.fields,
-        PHI_FIELDS.custodyLogs.deterministicFields
-      )
+      encryptionService.decryptObject(log, PHI_FIELDS.custodyLogs.fields, PHI_FIELDS.custodyLogs.deterministicFields)
     );
   }
 
@@ -505,7 +502,7 @@ export class DatabaseStorage implements IStorage {
     );
   }
 
-  // Metrics operations
+  // ========== METRICS ==========
   async getMetrics(period?: string): Promise<Metric[]> {
     if (period) {
       return await db.select().from(metrics).where(eq(metrics.period, period));
@@ -518,7 +515,7 @@ export class DatabaseStorage implements IStorage {
     return metric;
   }
 
-  // Audit logging operations - HIPAA compliant, immutable
+  // ========== AUDIT LOGS ==========
   async createAuditLog(logData: InsertAuditLog): Promise<AuditLog> {
     const [log] = await db.insert(auditLogs).values(logData).returning();
     return log;
@@ -566,7 +563,6 @@ export class DatabaseStorage implements IStorage {
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
     }
-
     return await query.orderBy(desc(auditLogs.timestamp));
   }
 
@@ -599,11 +595,10 @@ export class DatabaseStorage implements IStorage {
     if (conditions.length > 0) {
       query = query.where(and(...conditions)) as any;
     }
-
     return await query.orderBy(desc(authAuditLogs.timestamp));
   }
 }
 
-// ✅ Named export (existing) AND default export (new)
+// Named export
 export const storage = new DatabaseStorage();
 export default storage;

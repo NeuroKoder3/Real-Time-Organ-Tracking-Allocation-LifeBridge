@@ -31,7 +31,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import queryClient from "@/lib/queryClient"; // ✅ fixed import
+import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { Transport, Organ, Allocation } from "@shared/schema";
@@ -71,9 +71,7 @@ function TransportCard({
       const now = new Date();
       if (eta < now) return "Delayed";
       const hours = Math.floor((eta.getTime() - now.getTime()) / (1000 * 60 * 60));
-      const minutes = Math.floor(
-        ((eta.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60),
-      );
+      const minutes = Math.floor(((eta.getTime() - now.getTime()) % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}h ${minutes}m`;
     }
     return "Pending";
@@ -115,12 +113,10 @@ function TransportCard({
             <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
             <div className="flex-1 space-y-1">
               <p className="text-sm">
-                <span className="text-muted-foreground">From:</span>{" "}
-                {transport.originLocation}
+                <span className="text-muted-foreground">From:</span> {transport.originLocation}
               </p>
               <p className="text-sm">
-                <span className="text-muted-foreground">To:</span>{" "}
-                {transport.destinationLocation}
+                <span className="text-muted-foreground">To:</span> {transport.destinationLocation}
               </p>
             </div>
           </div>
@@ -129,9 +125,7 @@ function TransportCard({
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p className="text-muted-foreground">Mode</p>
-            <p className="font-medium capitalize">
-              {transport.transportMode.replace("_", " ")}
-            </p>
+            <p className="font-medium capitalize">{transport.transportMode.replace("_", " ")}</p>
           </div>
           <div>
             <p className="text-muted-foreground">ETA</p>
@@ -140,9 +134,7 @@ function TransportCard({
           {transport.trackingNumber && (
             <div>
               <p className="text-muted-foreground">Tracking</p>
-              <p className="font-medium font-mono text-xs">
-                {transport.trackingNumber}
-              </p>
+              <p className="font-medium font-mono text-xs">{transport.trackingNumber}</p>
             </div>
           )}
           {transport.costEstimate && (
@@ -242,10 +234,10 @@ export default function TransportPage() {
     queryFn: () => api<Allocation[]>("/api/allocations"),
   });
 
-  const enhancedTransports = transports.map((transport) => ({
-    ...transport,
-    organ: organs.find((o) => o.id === transport.organId),
-    allocation: allocations.find((a) => a.id === transport.allocationId),
+  const enhancedTransports = transports.map((t) => ({
+    ...t,
+    organ: organs.find((o) => o.id === t.organId),
+    allocation: allocations.find((a) => a.id === t.allocationId),
   }));
 
   const createTransportMutation = useMutation({
@@ -258,7 +250,7 @@ export default function TransportPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/transports"] });
       toast({
         title: "Transport Scheduled",
-        description: "The organ transport has been scheduled.",
+        description: "The organ transport has been successfully scheduled.",
       });
       setIsAddDialogOpen(false);
       resetForm();
@@ -281,13 +273,13 @@ export default function TransportPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transports"] });
       toast({
-        title: "Transport Updated",
-        description: "The transport status has been updated.",
+        title: "Status Updated",
+        description: "Transport status updated successfully.",
       });
     },
   });
 
-  const resetForm = () => {
+  const resetForm = () =>
     setFormData({
       organId: "",
       allocationId: "",
@@ -299,48 +291,94 @@ export default function TransportPage() {
       trackingNumber: "",
       costEstimate: 0,
     });
-  };
 
-  const handleSubmit = () => {
-    createTransportMutation.mutate(formData);
-  };
-
-  const handleUpdateStatus = (id: string, status: string) => {
+  const handleSubmit = () => createTransportMutation.mutate(formData);
+  const handleUpdateStatus = (id: string, status: string) =>
     updateTransportStatusMutation.mutate({ id, status });
-  };
 
-  // ✅ Filter logic
-  const filteredTransports = enhancedTransports.filter(
-    (transport: TransportWithDetails) => {
-      const matchesSearch =
-        transport.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transport.originLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transport.destinationLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transport.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredTransports = enhancedTransports.filter((t) => {
+    const matchesSearch =
+      t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.originLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.destinationLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || t.status === filterStatus;
+    const matchesMode = filterMode === "all" || t.transportMode === filterMode;
+    return matchesSearch && matchesStatus && matchesMode;
+  });
 
-      const matchesStatus =
-        filterStatus === "all" || transport.status === filterStatus;
-      const matchesMode =
-        filterMode === "all" || transport.transportMode === filterMode;
-
-      return matchesSearch && matchesStatus && matchesMode;
-    },
-  );
-
-  const availableOrgans = organs.filter(
-    (o: Organ) => o.status === "available" || o.status === "matched",
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">Loading...</div>
-    );
-  }
+  if (isLoading)
+    return <div className="flex items-center justify-center h-64">Loading...</div>;
 
   return (
     <div className="space-y-6">
-      {/* ... unchanged UI code ... */}
-      {/* Transport Cards */}
+      {/* ✅ Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Transport Management</h1>
+          <p className="text-muted-foreground">
+            Manage, track, and update organ transportation logistics
+          </p>
+        </div>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => resetForm()}>
+              <Plus className="h-4 w-4 mr-2" /> Schedule Transport
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Schedule New Transport</DialogTitle>
+              <DialogDescription>
+                Assign an organ to a transport route and define logistics.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Organ</Label>
+                <Select
+                  value={formData.organId}
+                  onValueChange={(v) => setFormData((f) => ({ ...f, organId: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Organ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organs.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.organType} (Blood {o.bloodType})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Origin Location</Label>
+                <Input
+                  value={formData.originLocation}
+                  onChange={(e) => setFormData({ ...formData, originLocation: e.target.value })}
+                  placeholder="Enter origin hospital"
+                />
+              </div>
+              <div>
+                <Label>Destination Location</Label>
+                <Input
+                  value={formData.destinationLocation}
+                  onChange={(e) =>
+                    setFormData({ ...formData, destinationLocation: e.target.value })
+                  }
+                  placeholder="Enter destination hospital"
+                />
+              </div>
+              <Button className="w-full mt-2" onClick={handleSubmit}>
+                Confirm Transport
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* ✅ Transport Cards */}
       {filteredTransports.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -348,19 +386,15 @@ export default function TransportPage() {
             <p className="text-lg font-medium mb-1">No transports found</p>
             <p className="text-sm text-muted-foreground">
               {searchTerm || filterStatus !== "all" || filterMode !== "all"
-                ? "Try adjusting your filters"
-                : "Schedule your first transport"}
+                ? "Try adjusting your filters."
+                : "Schedule your first organ transport."}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTransports.map((transport: TransportWithDetails) => (
-            <TransportCard
-              key={transport.id}
-              transport={transport}
-              onUpdateStatus={handleUpdateStatus}
-            />
+          {filteredTransports.map((t) => (
+            <TransportCard key={t.id} transport={t} onUpdateStatus={handleUpdateStatus} />
           ))}
         </div>
       )}

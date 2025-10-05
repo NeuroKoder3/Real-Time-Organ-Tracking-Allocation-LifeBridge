@@ -1,11 +1,12 @@
 import type { Response, NextFunction } from "express";
 import storage from "./storage.js";
-import type { InsertAuditLog, UserRole } from "../shared/schema.js";
+import type { InsertAuditLogData, UserRole } from "../shared/schema.js";
 import type { AuthenticatedRequest } from "./types.js";
 
-// ---------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*                                   Helpers                                  */
+/* -------------------------------------------------------------------------- */
+
 function isPHIAccessed(endpoint: string): boolean {
   const phiEndpoints = [
     "/api/organs",
@@ -30,9 +31,7 @@ function getEntityTypeFromEndpoint(endpoint: string): string | undefined {
     "/api/custody-logs": "custodyLogs",
     "/api/auth": "auth",
   };
-  return Object.entries(patterns).find(([pattern]) =>
-    endpoint.startsWith(pattern),
-  )?.[1];
+  return Object.entries(patterns).find(([pattern]) => endpoint.startsWith(pattern))?.[1];
 }
 
 function extractEntityId(url: string): string | undefined {
@@ -43,15 +42,14 @@ function extractEntityId(url: string): string | undefined {
 function determineAction(method: string, endpoint: string): string {
   const lowerMethod = method.toLowerCase();
   if (endpoint.includes("/export")) return "export";
+
   switch (lowerMethod) {
     case "get":
       return "view";
     case "post":
-      return endpoint.includes("/auth/login")
-        ? "login"
-        : endpoint.includes("/auth/logout")
-        ? "logout"
-        : "create";
+      if (endpoint.includes("/auth/login")) return "login";
+      if (endpoint.includes("/auth/logout")) return "logout";
+      return "create";
     case "put":
     case "patch":
       return "update";
@@ -90,13 +88,14 @@ function getClientIp(req: AuthenticatedRequest): string {
   return req.socket?.remoteAddress || "unknown";
 }
 
-// ---------------------------------------------------------
-// Middleware
-// ---------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*                                 Middleware                                 */
+/* -------------------------------------------------------------------------- */
+
 export function auditMiddleware(
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   const startTime = Date.now();
   const endpoint = req.path;
@@ -106,7 +105,7 @@ export function auditMiddleware(
   const entityType = getEntityTypeFromEndpoint(endpoint);
   const entityId = extractEntityId(req.url);
 
-  let auditLogData: Partial<InsertAuditLog> = {
+  let auditLogData: Partial<InsertAuditLogData> = {
     userId: req.user?.claims?.sub || null,
     userEmail: req.user?.claims?.email || null,
     userRole: (req.user?.role as UserRole) || null,
@@ -156,14 +155,20 @@ export function auditMiddleware(
       }
     }
 
+    // ✅ Safely spread metadata
+    const baseMeta =
+      typeof auditLogData.metadata === "object" && auditLogData.metadata !== null
+        ? auditLogData.metadata
+        : {};
+
     auditLogData.metadata = {
-      ...(auditLogData.metadata ?? {}),
+      ...baseMeta,
       duration,
       statusCode: res.statusCode,
     };
 
     try {
-      await storage.createAuditLog(auditLogData as InsertAuditLog);
+      await storage.createAuditLog(auditLogData as InsertAuditLogData);
     } catch (err) {
       console.error("[Audit] Failed to create audit log:", err);
     }
@@ -172,15 +177,16 @@ export function auditMiddleware(
   next();
 }
 
-// ---------------------------------------------------------
-// Manual audit helper (simplified to match real usage)
-// ---------------------------------------------------------
+/* -------------------------------------------------------------------------- */
+/*                           Manual Audit Log Helper                          */
+/* -------------------------------------------------------------------------- */
+
 export async function createManualAuditLog(
   req: AuthenticatedRequest,
   action: string,
-  details: Partial<InsertAuditLog> = {}
+  details: Partial<InsertAuditLogData> = {}
 ) {
-  const auditLogData: InsertAuditLog = {
+  const auditLogData: InsertAuditLogData = {
     userId: req.user?.claims?.sub || null,
     userEmail: req.user?.claims?.email || null,
     userRole: (req.user?.role as UserRole) || null,
@@ -198,8 +204,12 @@ export async function createManualAuditLog(
     success: details.success ?? true,
     ...details,
   };
+
   return storage.createAuditLog(auditLogData);
 }
 
-// auto-fix: provide default export for compatibility with default imports
+/* -------------------------------------------------------------------------- */
+/*                            Default Export (for ESM)                        */
+/* -------------------------------------------------------------------------- */
+
 export default auditMiddleware;

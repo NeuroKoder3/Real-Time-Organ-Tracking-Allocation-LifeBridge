@@ -32,17 +32,36 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import queryClient from "@/lib/queryClient"; // ✅ FIXED: default import
+import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { Allocation, Organ, Recipient } from "@shared/schema";
-import { api } from "@/lib/api";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
+
+// 🔒 Secure helpers
+async function getCsrfToken() {
+  try {
+    const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
+    const data = await res.json();
+    return data?.csrfToken;
+  } catch {
+    return undefined;
+  }
+}
+
+function getAuthToken() {
+  return localStorage.getItem("token");
+}
 
 interface AllocationWithDetails extends Allocation {
   organ?: Organ;
   recipient?: Recipient;
 }
 
+// ----------------------
+// Allocation Card
+// ----------------------
 function AllocationCard({
   allocation,
   onAccept,
@@ -159,19 +178,14 @@ function AllocationCard({
           </div>
         </div>
 
-        {/* Proposed + priority */}
         <div className="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
           <span>Priority: {allocation.priority}</span>
           <span>
             Proposed:{" "}
-            {format(
-              new Date(allocation.proposedAt || Date.now()),
-              "MMM dd, HH:mm"
-            )}
+            {format(new Date(allocation.proposedAt || Date.now()), "MMM dd, HH:mm")}
           </span>
         </div>
 
-        {/* Decline reason */}
         {allocation.declineReason && (
           <div className="p-2 bg-destructive/10 rounded-md">
             <p className="text-xs text-destructive flex items-start gap-1">
@@ -181,24 +195,15 @@ function AllocationCard({
           </div>
         )}
 
-        {/* Accept / Decline actions */}
         {allocation.status === "proposed" && (
           <div className="flex gap-2 pt-2">
-            <Button
-              size="sm"
-              onClick={() => onAccept(allocation.id)}
-              data-testid={`button-accept-allocation-${allocation.id}`}
-            >
+            <Button size="sm" onClick={() => onAccept(allocation.id)}>
               <CheckCircle className="h-3 w-3 mr-1" />
               Accept Match
             </Button>
             <Dialog open={showDeclineDialog} onOpenChange={setShowDeclineDialog}>
               <DialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  data-testid={`button-decline-allocation-${allocation.id}`}
-                >
+                <Button size="sm" variant="outline">
                   <XCircle className="h-3 w-3 mr-1" />
                   Decline
                 </Button>
@@ -207,29 +212,26 @@ function AllocationCard({
                 <DialogHeader>
                   <DialogTitle>Decline Allocation</DialogTitle>
                   <DialogDescription>
-                    Please provide a reason for declining this organ-recipient
-                    match.
+                    Provide a reason for declining this match.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="reason">Reason for Decline</Label>
+                    <Label htmlFor="reason">Reason</Label>
                     <Textarea
                       id="reason"
                       value={declineReason}
                       onChange={(e) => setDeclineReason(e.target.value)}
                       placeholder="Enter reason..."
                       rows={3}
-                      data-testid="input-decline-reason"
                     />
                   </div>
                   <Button
                     className="w-full"
                     onClick={handleDeclineSubmit}
                     disabled={!declineReason}
-                    data-testid="button-submit-decline"
                   >
-                    Submit Decline Reason
+                    Submit
                   </Button>
                 </div>
               </DialogContent>
@@ -241,12 +243,14 @@ function AllocationCard({
   );
 }
 
+// ----------------------
+// Main Allocations Page
+// ----------------------
 export default function Allocations() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-
   const [formData, setFormData] = useState({
     organId: "",
     recipientId: "",
@@ -254,132 +258,122 @@ export default function Allocations() {
     priority: 1,
   });
 
+  const fetchWithAuth = async (url: string) => {
+    const token = getAuthToken();
+    const res = await fetch(`${API_BASE}${url}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  };
+
   const { data: allocations = [], isLoading } = useQuery({
-    queryKey: ["/api/allocations"],
-    queryFn: () => api<Allocation[]>("/api/allocations"),
+    queryKey: ["allocations"],
+    queryFn: () => fetchWithAuth("/api/allocations"),
   });
 
   const { data: organs = [] } = useQuery({
-    queryKey: ["/api/organs"],
-    queryFn: () => api<Organ[]>("/api/organs"),
+    queryKey: ["organs"],
+    queryFn: () => fetchWithAuth("/api/organs"),
   });
 
   const { data: recipients = [] } = useQuery({
-    queryKey: ["/api/recipients"],
-    queryFn: () => api<Recipient[]>("/api/recipients"),
+    queryKey: ["recipients"],
+    queryFn: () => fetchWithAuth("/api/recipients"),
   });
 
-  const enhancedAllocations = allocations.map((allocation: Allocation) => ({
-    ...allocation,
-    organ: organs.find((o: Organ) => o.id === allocation.organId),
-    recipient: recipients.find((r: Recipient) => r.id === allocation.recipientId),
+  const enhanced = allocations.map((a: Allocation) => ({
+    ...a,
+    organ: organs.find((o: Organ) => o.id === a.organId),
+    recipient: recipients.find((r: Recipient) => r.id === a.recipientId),
   }));
 
-  const createAllocationMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      api("/api/allocations", {
+  // ----------------------
+  // Mutations (Create / Accept / Decline)
+  // ----------------------
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/allocations`, {
         method: "POST",
-        body: JSON.stringify({
-          ...data,
-          compatibilityData: {},
-        }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/organs"] });
-      toast({
-        title: "Allocation Created",
-        description: "The organ-recipient match has been proposed.",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ ...data, compatibilityData: {} }),
       });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["organs"] });
+      toast({ title: "Allocation Created", description: "Organ match proposed successfully." });
       setIsAddDialogOpen(false);
-      resetForm();
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create allocation. Please try again.",
-        variant: "destructive",
-      });
+      setFormData({ organId: "", recipientId: "", matchScore: 0, priority: 1 });
     },
   });
 
-  const acceptAllocationMutation = useMutation({
-    mutationFn: (id: string) =>
-      api(`/api/allocations/${id}/accept`, {
+  const acceptMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/allocations/${id}/accept`, {
         method: "POST",
-      }),
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
-      toast({
-        title: "Allocation Accepted",
-        description: "The organ-recipient match has been accepted.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["allocations"] });
+      toast({ title: "Allocation Accepted", description: "Organ-recipient match accepted." });
     },
   });
 
-  const declineAllocationMutation = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      api(`/api/allocations/${id}/decline`, {
+  const declineMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/allocations/${id}/decline`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify({ reason }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/allocations"] });
-      toast({
-        title: "Allocation Declined",
-        description: "The organ-recipient match has been declined.",
       });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allocations"] });
+      toast({ title: "Allocation Declined", description: "Match has been declined." });
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      organId: "",
-      recipientId: "",
-      matchScore: 0,
-      priority: 1,
-    });
-  };
-
-  const handleSubmit = () => {
-    createAllocationMutation.mutate(formData);
-  };
-
-  const handleAccept = (id: string) => {
-    acceptAllocationMutation.mutate(id);
-  };
-
-  const handleDecline = (id: string, reason: string) => {
-    declineAllocationMutation.mutate({ id, reason });
-  };
-
-  const filteredAllocations = enhancedAllocations.filter(
-    (allocation: AllocationWithDetails) => {
-      const matchesSearch =
-        allocation.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        allocation.organ?.organType
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        allocation.recipient?.firstName
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        allocation.recipient?.lastName
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        filterStatus === "all" || allocation.status === filterStatus;
-      return matchesSearch && matchesStatus;
-    }
-  );
-
-  const availableOrgans = organs.filter((o: Organ) => o.status === "available");
-  const waitingRecipients = recipients.filter((r: Recipient) => r.status === "waiting");
+  const filtered = enhanced.filter((a: AllocationWithDetails) => {
+    const match =
+      a.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.organ?.organType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.recipient?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.recipient?.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const statusMatch = filterStatus === "all" || a.status === filterStatus;
+    return match && statusMatch;
+  });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">Loading...</div>
-    );
+    return <div className="flex items-center justify-center h-64">Loading...</div>;
   }
 
   return (
@@ -388,9 +382,7 @@ export default function Allocations() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Allocations</h1>
-          <p className="text-muted-foreground">
-            Manage and review proposed organ-recipient matches
-          </p>
+          <p className="text-muted-foreground">Manage and review organ-recipient matches</p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -402,78 +394,70 @@ export default function Allocations() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Allocation</DialogTitle>
-              <DialogDescription>
-                Propose a new organ-recipient match
-              </DialogDescription>
+              <DialogDescription>Propose a new organ-recipient match</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
+              <div>
                 <Label>Organ</Label>
                 <Select
                   value={formData.organId}
-                  onValueChange={(v) =>
-                    setFormData((f) => ({ ...f, organId: v }))
-                  }
+                  onValueChange={(v) => setFormData((f) => ({ ...f, organId: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select organ" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableOrgans.map((o: Organ) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.organType} (Blood {o.bloodType})
-                      </SelectItem>
-                    ))}
+                    {organs
+                      .filter((o: Organ) => o.status === "available")
+                      .map((o: Organ) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.organType} (Blood {o.bloodType})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div>
                 <Label>Recipient</Label>
                 <Select
                   value={formData.recipientId}
-                  onValueChange={(v) =>
-                    setFormData((f) => ({ ...f, recipientId: v }))
-                  }
+                  onValueChange={(v) => setFormData((f) => ({ ...f, recipientId: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select recipient" />
                   </SelectTrigger>
                   <SelectContent>
-                    {waitingRecipients.map((r: Recipient) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.firstName} {r.lastName} (Blood {r.bloodType})
-                      </SelectItem>
-                    ))}
+                    {recipients
+                      .filter((r: Recipient) => r.status === "waiting" || r.status === "active")
+                      .map((r: Recipient) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.firstName} {r.lastName} (Blood {r.bloodType})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div>
                 <Label>Match Score (%)</Label>
                 <Input
                   type="number"
                   value={formData.matchScore}
                   onChange={(e) =>
-                    setFormData((f) => ({
-                      ...f,
-                      matchScore: parseInt(e.target.value, 10),
-                    }))
+                    setFormData({ ...formData, matchScore: parseInt(e.target.value, 10) })
                   }
                 />
               </div>
-              <div className="space-y-2">
+              <div>
                 <Label>Priority</Label>
                 <Input
                   type="number"
                   value={formData.priority}
                   onChange={(e) =>
-                    setFormData((f) => ({
-                      ...f,
-                      priority: parseInt(e.target.value, 10),
-                    }))
+                    setFormData({ ...formData, priority: parseInt(e.target.value, 10) })
                   }
                 />
               </div>
-              <Button className="w-full" onClick={handleSubmit}>
+              <Button className="w-full" onClick={() => createMutation.mutate(formData)}>
                 Create Allocation
               </Button>
             </div>
@@ -506,12 +490,12 @@ export default function Allocations() {
 
       {/* Allocations grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredAllocations.map((allocation: AllocationWithDetails) => (
+        {filtered.map((allocation) => (
           <AllocationCard
             key={allocation.id}
             allocation={allocation}
-            onAccept={handleAccept}
-            onDecline={handleDecline}
+            onAccept={(id) => acceptMutation.mutate(id)}
+            onDecline={(id, reason) => declineMutation.mutate({ id, reason })}
           />
         ))}
       </div>

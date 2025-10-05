@@ -30,10 +30,27 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import queryClient from "@/lib/queryClient";
-import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { Recipient as DbRecipient } from "@shared/schema";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
+
+// 🔒 Get CSRF token
+async function getCsrfToken() {
+  try {
+    const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
+    const data = await res.json();
+    return data?.csrfToken;
+  } catch {
+    return undefined;
+  }
+}
+
+// 🔑 Get JWT token
+function getAuthToken() {
+  return localStorage.getItem("token");
+}
 
 // ----------------------------
 // Local types
@@ -151,24 +168,10 @@ function RecipientCard({
             <p className="font-medium">
               {recipient.waitListDate
                 ? `${Math.floor(
-                    (Date.now() - new Date(recipient.waitListDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
+                    (Date.now() - new Date(recipient.waitListDate).getTime()) / 86400000
                   )} days`
                 : "N/A"}
             </p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Compatibility Score</span>
-            <span className="font-medium">{recipient.compatibilityScore ?? 0}%</span>
-          </div>
-          <div className="w-full bg-muted rounded-full h-2">
-            <div
-              className="bg-primary h-2 rounded-full transition-all"
-              style={{ width: `${recipient.compatibilityScore ?? 0}%` }}
-            />
           </div>
         </div>
 
@@ -201,9 +204,6 @@ function RecipientCard({
             <Trash2 className="h-3 w-3 mr-1" />
             Remove
           </Button>
-          <Button size="sm" className="ml-auto" disabled={recipient.status === "matched"}>
-            Find Match
-          </Button>
         </div>
       </CardContent>
     </Card>
@@ -231,42 +231,87 @@ export default function Recipients() {
   });
 
   const { data: recipients = [], isLoading } = useQuery({
-    queryKey: ["/api/recipients"],
+    queryKey: ["recipients"],
     queryFn: async () => {
-      const data = await api<DbRecipient[]>("/api/recipients");
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE}/api/recipients`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch recipients");
+      const data = await res.json();
       return data.map(mapRecipient);
     },
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      api("/api/recipients", { method: "POST", body: JSON.stringify(data) }),
+    mutationFn: async (data: typeof formData) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/recipients`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
-      toast({ title: "Recipient Added" });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
+      toast({ title: "Recipient Added", description: "New recipient added successfully." });
       setIsAddDialogOpen(false);
     },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) =>
-      api(`/api/recipients/${data.id}`, {
+    mutationFn: async (data: any) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/recipients/${data.id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify(data),
-      }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
-      toast({ title: "Recipient Updated" });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
+      toast({ title: "Recipient Updated", description: "Recipient info updated." });
       setIsAddDialogOpen(false);
       setEditingRecipient(null);
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api(`/api/recipients/${id}`, { method: "DELETE" }),
+    mutationFn: async (id: string) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/recipients/${id}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/recipients"] });
-      toast({ title: "Recipient Removed" });
+      queryClient.invalidateQueries({ queryKey: ["recipients"] });
+      toast({ title: "Recipient Removed", description: "Recipient removed from waitlist." });
     },
   });
 
@@ -297,15 +342,13 @@ export default function Recipients() {
     }
   };
 
-  const filteredRecipients = recipients.filter((recipient) => {
+  const filteredRecipients = recipients.filter((r) => {
     const matchesSearch =
-      recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (recipient.medicalId ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (recipient.hospital ?? "").toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = filterStatus === "all" || recipient.status === filterStatus;
-    const matchesUrgency = filterUrgency === "all" || recipient.urgencyLevel === filterUrgency;
-
+      r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.medicalId ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.hospital ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || r.status === filterStatus;
+    const matchesUrgency = filterUrgency === "all" || r.urgencyLevel === filterUrgency;
     return matchesSearch && matchesStatus && matchesUrgency;
   });
 
@@ -315,12 +358,11 @@ export default function Recipients() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Recipient Waitlist</h1>
           <p className="text-muted-foreground">
-            Manage organ recipients and their medical compatibility profiles
+            Manage organ recipients and compatibility profiles
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -332,9 +374,7 @@ export default function Recipients() {
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>
-                {editingRecipient ? "Edit Recipient" : "Add New Recipient"}
-              </DialogTitle>
+              <DialogTitle>{editingRecipient ? "Edit Recipient" : "Add New Recipient"}</DialogTitle>
               <DialogDescription>
                 {editingRecipient
                   ? "Update recipient information"
@@ -342,7 +382,6 @@ export default function Recipients() {
               </DialogDescription>
             </DialogHeader>
 
-            {/* ✅ Form fields */}
             <div className="space-y-3">
               <Input
                 placeholder="Name"
@@ -390,7 +429,6 @@ export default function Recipients() {
                   <SelectItem value="matched">Matched</SelectItem>
                 </SelectContent>
               </Select>
-
               <Button className="w-full mt-2" onClick={handleSubmit}>
                 {editingRecipient ? "Update Recipient" : "Add Recipient"}
               </Button>
@@ -399,7 +437,7 @@ export default function Recipients() {
         </Dialog>
       </div>
 
-      {/* Search and Filter */}
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -483,7 +521,7 @@ export default function Recipients() {
         </Card>
       </div>
 
-      {/* Recipient Cards */}
+      {/* Recipients */}
       {filteredRecipients.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">

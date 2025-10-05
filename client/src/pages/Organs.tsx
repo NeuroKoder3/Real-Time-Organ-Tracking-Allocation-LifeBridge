@@ -15,14 +15,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, Plus, Clock, MapPin, Edit, Trash2, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import queryClient from "@/lib/queryClient"; // ✅ fixed import
+import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Organ } from "@shared/schema";
-import { api } from "@/lib/api";
 
-type UrgencyLevel = "critical" | "warning" | "normal";
-type BadgeVariant = "default" | "destructive" | "secondary" | "outline";
+const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
 
+// ---------- helpers ----------
+async function getCsrfToken() {
+  try {
+    const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
+    const data = await res.json();
+    return data?.csrfToken;
+  } catch {
+    return undefined;
+  }
+}
+
+function getAuthToken() {
+  return localStorage.getItem("token");
+}
+
+// ---------- Card ----------
 function OrganCard({
   organ,
   onEdit,
@@ -33,116 +47,78 @@ function OrganCard({
   onDelete: (id: string) => void;
 }) {
   const [timeRemaining, setTimeRemaining] = useState("");
-  const [urgencyLevel, setUrgencyLevel] = useState<UrgencyLevel>("normal");
+  const [urgency, setUrgency] = useState<"normal" | "warning" | "critical">("normal");
 
   useEffect(() => {
-    const calculateTimeRemaining = () => {
+    const tick = () => {
       if (!organ.preservationStartTime) return;
-
       const start = new Date(organ.preservationStartTime).getTime();
-      const now = Date.now();
-      const elapsed = (now - start) / (1000 * 60 * 60);
+      const elapsed = (Date.now() - start) / 36e5;
       const remaining = organ.viabilityHours - elapsed;
-
       if (remaining <= 0) {
+        setUrgency("critical");
         setTimeRemaining("EXPIRED");
-        setUrgencyLevel("critical");
       } else if (remaining < 2) {
+        setUrgency("critical");
         setTimeRemaining(`${Math.floor(remaining)}h ${Math.floor((remaining % 1) * 60)}m`);
-        setUrgencyLevel("critical");
       } else if (remaining < 4) {
+        setUrgency("warning");
         setTimeRemaining(`${Math.floor(remaining)}h ${Math.floor((remaining % 1) * 60)}m`);
-        setUrgencyLevel("warning");
       } else {
+        setUrgency("normal");
         setTimeRemaining(`${Math.floor(remaining)}h`);
-        setUrgencyLevel("normal");
       }
     };
+    tick();
+    const i = setInterval(tick, 60000);
+    return () => clearInterval(i);
+  }, [organ]);
 
-    calculateTimeRemaining();
-    const interval = setInterval(calculateTimeRemaining, 60000);
-    return () => clearInterval(interval);
-  }, [organ.preservationStartTime, organ.viabilityHours]);
-
-  const progressPercentage = organ.preservationStartTime
-    ? Math.max(
-        0,
-        Math.min(
-          100,
-          ((organ.viabilityHours -
-            (Date.now() - new Date(organ.preservationStartTime).getTime()) / (1000 * 60 * 60)) /
-            organ.viabilityHours) *
-            100
+  const progress =
+    organ.preservationStartTime
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            ((organ.viabilityHours -
+              (Date.now() - new Date(organ.preservationStartTime).getTime()) / 36e5) /
+              organ.viabilityHours) *
+              100
+          )
         )
-      )
-    : 100;
+      : 100;
 
-  const urgencyColors: Record<UrgencyLevel, BadgeVariant> = {
-    critical: "destructive",
-    warning: "secondary",
-    normal: "default",
-  };
-
-  const statusColors: Record<string, BadgeVariant> = {
-    available: "default",
-    allocated: "secondary",
-    discarded: "outline",
-  };
+  const badgeColor =
+    urgency === "critical" ? "destructive" : urgency === "warning" ? "secondary" : "default";
 
   return (
-    <Card className="hover-elevate">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">{organ.organType}</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={urgencyColors[urgencyLevel]}>
-              <Clock className="h-3 w-3 mr-1" />
-              {timeRemaining}
-            </Badge>
-            <Badge variant="outline">{organ.bloodType}</Badge>
-          </div>
+    <Card>
+      <CardHeader className="pb-3 flex justify-between">
+        <div className="flex items-center gap-2">
+          <Heart className="h-5 w-5 text-primary" />
+          <CardTitle className="text-lg">{organ.organType}</CardTitle>
         </div>
+        <Badge variant={badgeColor}>
+          <Clock className="h-3 w-3 mr-1" />
+          {timeRemaining}
+        </Badge>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <Progress value={progressPercentage} className="h-2" />
-        <div className="grid grid-cols-2 gap-3 text-sm">
+      <CardContent className="space-y-3 text-sm">
+        <Progress value={progress} />
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-muted-foreground">Donor ID</p>
-            <p className="font-medium font-mono">{organ.donorId}</p>
+            <p className="text-muted-foreground">Donor</p>
+            <p className="font-mono">{organ.donorId}</p>
           </div>
           <div>
             <p className="text-muted-foreground">Status</p>
-            <Badge variant={statusColors[organ.status] ?? "outline"}>{organ.status}</Badge>
+            <Badge variant="outline">{organ.status}</Badge>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="col-span-2 flex items-center gap-1">
             <MapPin className="h-3 w-3 text-muted-foreground" />
-            <div>
-              <p className="text-muted-foreground">Location</p>
-              <p className="font-medium">{organ.currentLocation || "Unknown"}</p>
-            </div>
-          </div>
-          <div>
-            <p className="text-muted-foreground">HLA Markers</p>
-            <p className="font-medium">
-              {"hlaMarkers" in organ && (organ as any).hlaMarkers
-                ? (organ as any).hlaMarkers
-                : "Pending"}
-            </p>
+            <span>{organ.currentLocation ?? "Unknown"}</span>
           </div>
         </div>
-
-        {"specialRequirements" in organ && (organ as any).specialRequirements && (
-          <div className="p-2 bg-muted/50 rounded-md">
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              {(organ as any).specialRequirements}
-            </p>
-          </div>
-        )}
-
         <div className="flex gap-2 pt-2 border-t">
           <Button size="sm" variant="outline" onClick={() => onEdit(organ)}>
             <Edit className="h-3 w-3 mr-1" />
@@ -152,24 +128,18 @@ function OrganCard({
             <Trash2 className="h-3 w-3 mr-1" />
             Remove
           </Button>
-          <Button size="sm" className="ml-auto" disabled={organ.status !== "available"}>
-            Allocate
-          </Button>
         </div>
       </CardContent>
     </Card>
   );
 }
 
+// ---------- main ----------
 export default function Organs() {
   const { toast } = useToast();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingOrgan, setEditingOrgan] = useState<Organ | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterBloodType, setFilterBloodType] = useState<string>("all");
-
-  const [formData, setFormData] = useState({
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Organ | null>(null);
+  const [form, setForm] = useState({
     organType: "",
     bloodType: "",
     donorId: "",
@@ -181,57 +151,96 @@ export default function Organs() {
   });
 
   const { data: organs = [], isLoading } = useQuery<Organ[]>({
-    queryKey: ["/api/organs"],
-    queryFn: () => api<Organ[]>("/api/organs"),
+    queryKey: ["organs"],
+    queryFn: async () => {
+      const token = getAuthToken();
+      const res = await fetch(`${API_BASE}/api/organs`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to load organs");
+      return res.json();
+    },
   });
 
-  const createOrganMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      api("/api/organs", {
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/organs`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify({
           ...data,
           preservationStartTime: new Date().toISOString(),
         }),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organs"] });
-      toast({
-        title: "Organ Added",
-        description: "The organ has been successfully added to inventory.",
       });
-      setIsAddDialogOpen(false);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organs"] });
+      toast({ title: "Organ Added", description: "Organ successfully added." });
+      setDialogOpen(false);
       resetForm();
     },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const updateOrganMutation = useMutation({
-    mutationFn: ({ id, ...data }: Partial<Organ> & { id: string }) =>
-      api(`/api/organs/${id}`, {
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Organ> & { id: string }) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/organs/${id}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
         body: JSON.stringify(data),
-      }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organs"] });
-      toast({ title: "Organ Updated", description: "The organ information has been updated." });
-      setEditingOrgan(null);
+      queryClient.invalidateQueries({ queryKey: ["organs"] });
+      toast({ title: "Updated", description: "Organ updated successfully." });
+      setEditing(null);
+      setDialogOpen(false);
       resetForm();
     },
   });
 
-  const deleteOrganMutation = useMutation({
-    mutationFn: (id: string) =>
-      api(`/api/organs/${id}`, {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const token = getAuthToken();
+      const csrf = await getCsrfToken();
+      const res = await fetch(`${API_BASE}/api/organs/${id}`, {
         method: "DELETE",
-      }),
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+        },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organs"] });
-      toast({ title: "Organ Removed", description: "The organ has been removed from inventory." });
+      queryClient.invalidateQueries({ queryKey: ["organs"] });
+      toast({ title: "Removed", description: "Organ removed from inventory." });
     },
   });
 
-  const resetForm = () => {
-    setFormData({
+  function resetForm() {
+    setForm({
       organType: "",
       bloodType: "",
       donorId: "",
@@ -241,74 +250,47 @@ export default function Organs() {
       specialRequirements: "",
       status: "available",
     });
-  };
+  }
 
-  const handleSubmit = () => {
-    if (editingOrgan) {
-      updateOrganMutation.mutate({
-        id: editingOrgan.id,
-        ...formData,
-      });
+  function handleSubmit() {
+    if (editing) {
+      updateMutation.mutate({ id: editing.id, ...form });
     } else {
-      createOrganMutation.mutate(formData);
+      createMutation.mutate(form);
     }
-  };
+  }
 
-  const handleEdit = (organ: Organ) => {
-    setFormData({
+  function handleEdit(organ: Organ) {
+    setForm({
       organType: organ.organType,
       bloodType: organ.bloodType,
       donorId: organ.donorId,
-      currentLocation: organ.currentLocation || "",
+      currentLocation: organ.currentLocation ?? "",
       viabilityHours: organ.viabilityHours,
-      hlaMarkers: "hlaMarkers" in organ ? (organ as any).hlaMarkers || "" : "",
-      specialRequirements:
-        "specialRequirements" in organ ? (organ as any).specialRequirements || "" : "",
+      hlaMarkers: (organ as any).hlaMarkers ?? "",
+      specialRequirements: (organ as any).specialRequirements ?? "",
       status: organ.status,
     });
-    setEditingOrgan(organ);
-    setIsAddDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to remove this organ from inventory?")) {
-      deleteOrganMutation.mutate(id);
-    }
-  };
-
-  const filteredOrgans = organs.filter((organ) => {
-    const matchesSearch =
-      organ.organType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      organ.donorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (organ.currentLocation?.toLowerCase() || "").includes(searchTerm.toLowerCase());
-
-    const matchesStatus = filterStatus === "all" || organ.status === filterStatus;
-    const matchesBloodType = filterBloodType === "all" || organ.bloodType === filterBloodType;
-
-    return matchesSearch && matchesStatus && matchesBloodType;
-  });
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
+    setEditing(organ);
+    setDialogOpen(true);
   }
+
+  function handleDelete(id: string) {
+    if (confirm("Delete this organ?")) deleteMutation.mutate(id);
+  }
+
+  if (isLoading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="space-y-6">
-      {/* Header with Add/Edit Organ dialog */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Organ Inventory</h1>
-          <p className="text-muted-foreground">
-            Manage organ inventory with real-time viability tracking
-          </p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <div className="flex justify-between">
+        <h1 className="text-3xl font-bold">Organ Inventory</h1>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button
-              data-testid="button-add-organ"
               onClick={() => {
                 resetForm();
-                setEditingOrgan(null);
+                setEditing(null);
               }}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -317,85 +299,46 @@ export default function Organs() {
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{editingOrgan ? "Edit Organ" : "Add New Organ"}</DialogTitle>
+              <DialogTitle>{editing ? "Edit Organ" : "Add Organ"}</DialogTitle>
               <DialogDescription>
-                {editingOrgan
-                  ? "Update organ information"
-                  : "Enter organ details for inventory tracking"}
+                {editing ? "Update organ details" : "Enter details to add a new organ."}
               </DialogDescription>
             </DialogHeader>
-
-            {/* ✅ Actual form fields */}
             <div className="space-y-3">
-              <div>
-                <Label>Organ Type</Label>
-                <Input
-                  value={formData.organType}
-                  onChange={(e) => setFormData({ ...formData, organType: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label>Blood Type</Label>
-                <Input
-                  value={formData.bloodType}
-                  onChange={(e) => setFormData({ ...formData, bloodType: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label>Donor ID</Label>
-                <Input
-                  value={formData.donorId}
-                  onChange={(e) => setFormData({ ...formData, donorId: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label>Current Location</Label>
-                <Input
-                  value={formData.currentLocation}
-                  onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Viability Hours</Label>
-                <Input
-                  type="number"
-                  value={formData.viabilityHours}
-                  onChange={(e) =>
-                    setFormData({ ...formData, viabilityHours: parseInt(e.target.value, 10) })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <Label>HLA Markers</Label>
-                <Input
-                  value={formData.hlaMarkers}
-                  onChange={(e) => setFormData({ ...formData, hlaMarkers: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Special Requirements</Label>
-                <Input
-                  value={formData.specialRequirements}
-                  onChange={(e) =>
-                    setFormData({ ...formData, specialRequirements: e.target.value })
-                  }
-                />
-              </div>
-              <Button onClick={handleSubmit} className="w-full mt-4">
-                {editingOrgan ? "Update Organ" : "Add Organ"}
+              {[
+                ["Organ Type", "organType"],
+                ["Blood Type", "bloodType"],
+                ["Donor ID", "donorId"],
+                ["Current Location", "currentLocation"],
+                ["Viability Hours", "viabilityHours"],
+                ["HLA Markers", "hlaMarkers"],
+                ["Special Requirements", "specialRequirements"],
+              ].map(([label, key]) => (
+                <div key={key}>
+                  <Label>{label}</Label>
+                  <Input
+                    type={key === "viabilityHours" ? "number" : "text"}
+                    value={(form as any)[key]}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        [key]:
+                          key === "viabilityHours" ? parseInt(e.target.value, 10) || 0 : e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              ))}
+              <Button className="w-full mt-4" onClick={handleSubmit}>
+                {editing ? "Update Organ" : "Add Organ"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Organs list */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredOrgans.map((organ) => (
+        {organs.map((organ) => (
           <OrganCard key={organ.id} organ={organ} onEdit={handleEdit} onDelete={handleDelete} />
         ))}
       </div>

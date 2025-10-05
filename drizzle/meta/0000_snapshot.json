@@ -1,5 +1,5 @@
 {
-  "id": "5d1334de-b9ae-40ac-8ce2-f1ce4e65d0ce",
+  "id": "e37a2217-511f-402a-a411-b8c8f19a5fc6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -41,7 +41,8 @@
         },
         "status": {
           "name": "status",
-          "type": "varchar",
+          "type": "allocation_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'proposed'"
@@ -79,7 +80,23 @@
           "default": 1
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_allocations_status": {
+          "name": "idx_allocations_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "allocations_organ_id_organs_id_fk": {
           "name": "allocations_organ_id_organs_id_fk",
@@ -91,7 +108,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "allocations_recipient_id_recipients_id_fk": {
@@ -104,7 +121,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "allocations_responded_by_users_id_fk": {
@@ -349,66 +366,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "idx_audit_logs_action": {
-          "name": "idx_audit_logs_action",
-          "columns": [
-            {
-              "expression": "action",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_audit_logs_action_category": {
-          "name": "idx_audit_logs_action_category",
-          "columns": [
-            {
-              "expression": "action_category",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_audit_logs_session_id": {
-          "name": "idx_audit_logs_session_id",
-          "columns": [
-            {
-              "expression": "session_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_audit_logs_phi_accessed": {
-          "name": "idx_audit_logs_phi_accessed",
-          "columns": [
-            {
-              "expression": "phi_accessed",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -564,66 +521,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "idx_auth_audit_user_id": {
-          "name": "idx_auth_audit_user_id",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_auth_audit_event_type": {
-          "name": "idx_auth_audit_event_type",
-          "columns": [
-            {
-              "expression": "event_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_auth_audit_ip_address": {
-          "name": "idx_auth_audit_ip_address",
-          "columns": [
-            {
-              "expression": "ip_address",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_auth_audit_session_id": {
-          "name": "idx_auth_audit_session_id",
-          "columns": [
-            {
-              "expression": "session_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -733,7 +630,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "custody_logs_performed_by_users_id_fk": {
@@ -770,6 +667,24 @@
         "unos_id": {
           "name": "unos_id",
           "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_of_birth": {
+          "name": "date_of_birth",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -811,16 +726,19 @@
         },
         "status": {
           "name": "status",
-          "type": "varchar",
+          "type": "donor_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'active'"
         },
         "consent_status": {
           "name": "consent_status",
-          "type": "varchar",
+          "type": "consent_status",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'pending'"
         },
         "medical_history": {
           "name": "medical_history",
@@ -849,7 +767,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_donors_status": {
+          "name": "idx_donors_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_donors_consent_status": {
+          "name": "idx_donors_consent_status",
+          "columns": [
+            {
+              "expression": "consent_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -946,7 +895,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "messages_transport_id_transports_id_fk": {
@@ -959,7 +908,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "messages_sender_id_users_id_fk": {
@@ -1069,7 +1018,8 @@
         },
         "status": {
           "name": "status",
-          "type": "varchar",
+          "type": "organ_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'available'"
@@ -1143,7 +1093,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_organs_status": {
+          "name": "idx_organs_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_organs_blood_type": {
+          "name": "idx_organs_blood_type",
+          "columns": [
+            {
+              "expression": "blood_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "organs_donor_id_donors_id_fk": {
           "name": "organs_donor_id_donors_id_fk",
@@ -1155,7 +1136,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -1282,7 +1263,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_recipients_status": {
+          "name": "idx_recipients_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -1370,13 +1367,15 @@
         },
         "transport_mode": {
           "name": "transport_mode",
-          "type": "varchar",
+          "type": "transport_mode",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar",
+          "type": "transport_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'scheduled'"
@@ -1480,7 +1479,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_transports_status": {
+          "name": "idx_transports_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "transports_organ_id_organs_id_fk": {
           "name": "transports_organ_id_organs_id_fk",
@@ -1492,7 +1507,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "transports_allocation_id_allocations_id_fk": {
@@ -1505,7 +1520,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "transports_courier_id_users_id_fk": {
@@ -1543,7 +1558,7 @@
           "name": "email",
           "type": "varchar",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "first_name": {
           "name": "first_name",
@@ -1565,7 +1580,8 @@
         },
         "role": {
           "name": "role",
-          "type": "varchar",
+          "type": "user_role",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'coordinator'"
@@ -1626,7 +1642,79 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.allocation_status": {
+      "name": "allocation_status",
+      "schema": "public",
+      "values": [
+        "proposed",
+        "accepted",
+        "declined",
+        "expired"
+      ]
+    },
+    "public.consent_status": {
+      "name": "consent_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "consented",
+        "withdrawn"
+      ]
+    },
+    "public.donor_status": {
+      "name": "donor_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "inactive",
+        "eligible",
+        "ineligible",
+        "unknown"
+      ]
+    },
+    "public.organ_status": {
+      "name": "organ_status",
+      "schema": "public",
+      "values": [
+        "available",
+        "allocated",
+        "discarded",
+        "transplanted"
+      ]
+    },
+    "public.transport_mode": {
+      "name": "transport_mode",
+      "schema": "public",
+      "values": [
+        "ground",
+        "commercial_flight",
+        "charter_flight",
+        "helicopter",
+        "drone"
+      ]
+    },
+    "public.transport_status": {
+      "name": "transport_status",
+      "schema": "public",
+      "values": [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "failed"
+      ]
+    },
+    "public.user_role": {
+      "name": "user_role",
+      "schema": "public",
+      "values": [
+        "admin",
+        "coordinator",
+        "surgeon",
+        "transport"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

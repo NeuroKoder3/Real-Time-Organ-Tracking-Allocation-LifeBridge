@@ -1,23 +1,29 @@
 import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
-// --------------------
-// ✅ Ensure DATABASE_URL exists
-// --------------------
+// -----------------------------------------------------------------------------
+// ✅ Validate DATABASE_URL
+// -----------------------------------------------------------------------------
 if (!process.env.DATABASE_URL) {
-  throw new Error("❌ DATABASE_URL is not defined. Please check your .env file.");
+  throw new Error("❌ DATABASE_URL is not defined. Please add it to your .env file.");
 }
 
-// --------------------
-// ✅ Drizzle Config
-// --------------------
+// -----------------------------------------------------------------------------
+// ✅ Drizzle Configuration for Production
+// -----------------------------------------------------------------------------
 export default defineConfig({
-  out: "./drizzle",              // Folder for generated migrations
-  schema: "./shared/schema.ts",  // Path to schema
-  dialect: "postgresql",         // Using Neon/Postgres
+  schema: "./shared/schema.ts",   // Path to your schema file
+  out: "./drizzle",               // Output folder for migrations
+  dialect: "postgresql",          // Postgres-compatible database
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.DATABASE_URL!, // Connection URL from environment
   },
-  verbose: true,                 // Extra logging for debugging
-  strict: true,                  // Strong typing for safety
+
+  // ---------------------------------------------------------------------------
+  // 💡 Recommended Settings
+  // ---------------------------------------------------------------------------
+  strict: true,                    // Enforce full type-safety
+  verbose: process.env.NODE_ENV !== "production", // Reduce noise in production
+  casing: "snake_case",            // Ensures DB columns use consistent casing
+  breakpoints: true,               // Track migration checkpoints
 });

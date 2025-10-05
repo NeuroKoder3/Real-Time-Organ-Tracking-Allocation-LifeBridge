@@ -1,10 +1,17 @@
+CREATE TYPE "public"."allocation_status" AS ENUM('proposed', 'accepted', 'declined', 'expired');--> statement-breakpoint
+CREATE TYPE "public"."consent_status" AS ENUM('pending', 'consented', 'withdrawn');--> statement-breakpoint
+CREATE TYPE "public"."donor_status" AS ENUM('active', 'inactive', 'eligible', 'ineligible', 'unknown');--> statement-breakpoint
+CREATE TYPE "public"."organ_status" AS ENUM('available', 'allocated', 'discarded', 'transplanted');--> statement-breakpoint
+CREATE TYPE "public"."transport_mode" AS ENUM('ground', 'commercial_flight', 'charter_flight', 'helicopter', 'drone');--> statement-breakpoint
+CREATE TYPE "public"."transport_status" AS ENUM('scheduled', 'in_progress', 'completed', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."user_role" AS ENUM('admin', 'coordinator', 'surgeon', 'transport');--> statement-breakpoint
 CREATE TABLE "allocations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organ_id" uuid NOT NULL,
 	"recipient_id" uuid NOT NULL,
 	"match_score" numeric(5, 2) NOT NULL,
 	"compatibility_data" jsonb,
-	"status" varchar DEFAULT 'proposed' NOT NULL,
+	"status" "allocation_status" DEFAULT 'proposed' NOT NULL,
 	"proposed_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"responded_at" timestamp with time zone,
 	"responded_by" uuid,
@@ -78,14 +85,17 @@ CREATE TABLE "custody_logs" (
 CREATE TABLE "donors" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"unos_id" varchar,
+	"first_name" varchar,
+	"last_name" varchar,
+	"date_of_birth" timestamp with time zone,
 	"blood_type" varchar NOT NULL,
 	"age" integer,
 	"weight" numeric(5, 2),
 	"height" numeric(5, 2),
 	"location" varchar NOT NULL,
 	"hospital_id" varchar,
-	"status" varchar DEFAULT 'active' NOT NULL,
-	"consent_status" varchar NOT NULL,
+	"status" "donor_status" DEFAULT 'active' NOT NULL,
+	"consent_status" "consent_status" DEFAULT 'pending' NOT NULL,
 	"medical_history" jsonb,
 	"hla_type" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -121,7 +131,7 @@ CREATE TABLE "organs" (
 	"donor_id" uuid NOT NULL,
 	"organ_type" varchar NOT NULL,
 	"blood_type" varchar NOT NULL,
-	"status" varchar DEFAULT 'available' NOT NULL,
+	"status" "organ_status" DEFAULT 'available' NOT NULL,
 	"viability_hours" integer NOT NULL,
 	"preservation_start_time" timestamp with time zone NOT NULL,
 	"viability_deadline" timestamp with time zone NOT NULL,
@@ -167,8 +177,8 @@ CREATE TABLE "transports" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organ_id" uuid NOT NULL,
 	"allocation_id" uuid,
-	"transport_mode" varchar NOT NULL,
-	"status" varchar DEFAULT 'scheduled' NOT NULL,
+	"transport_mode" "transport_mode" NOT NULL,
+	"status" "transport_status" DEFAULT 'scheduled' NOT NULL,
 	"origin_location" varchar NOT NULL,
 	"destination_location" varchar NOT NULL,
 	"scheduled_pickup" timestamp with time zone NOT NULL,
@@ -189,11 +199,11 @@ CREATE TABLE "transports" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" varchar,
+	"email" varchar NOT NULL,
 	"first_name" varchar,
 	"last_name" varchar,
 	"profile_image_url" varchar,
-	"role" varchar DEFAULT 'coordinator' NOT NULL,
+	"role" "user_role" DEFAULT 'coordinator' NOT NULL,
 	"department" varchar,
 	"organization" varchar,
 	"hospital_id" varchar,
@@ -203,31 +213,30 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-ALTER TABLE "allocations" ADD CONSTRAINT "allocations_organ_id_organs_id_fk" FOREIGN KEY ("organ_id") REFERENCES "public"."organs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "allocations" ADD CONSTRAINT "allocations_recipient_id_recipients_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."recipients"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "allocations" ADD CONSTRAINT "allocations_organ_id_organs_id_fk" FOREIGN KEY ("organ_id") REFERENCES "public"."organs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "allocations" ADD CONSTRAINT "allocations_recipient_id_recipients_id_fk" FOREIGN KEY ("recipient_id") REFERENCES "public"."recipients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "allocations" ADD CONSTRAINT "allocations_responded_by_users_id_fk" FOREIGN KEY ("responded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "auth_audit_logs" ADD CONSTRAINT "auth_audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "auth_audit_logs" ADD CONSTRAINT "auth_audit_logs_changed_by_users_id_fk" FOREIGN KEY ("changed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "custody_logs" ADD CONSTRAINT "custody_logs_organ_id_organs_id_fk" FOREIGN KEY ("organ_id") REFERENCES "public"."organs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "custody_logs" ADD CONSTRAINT "custody_logs_organ_id_organs_id_fk" FOREIGN KEY ("organ_id") REFERENCES "public"."organs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "custody_logs" ADD CONSTRAINT "custody_logs_performed_by_users_id_fk" FOREIGN KEY ("performed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "messages" ADD CONSTRAINT "messages_allocation_id_allocations_id_fk" FOREIGN KEY ("allocation_id") REFERENCES "public"."allocations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "messages" ADD CONSTRAINT "messages_transport_id_transports_id_fk" FOREIGN KEY ("transport_id") REFERENCES "public"."transports"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_allocation_id_allocations_id_fk" FOREIGN KEY ("allocation_id") REFERENCES "public"."allocations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "messages" ADD CONSTRAINT "messages_transport_id_transports_id_fk" FOREIGN KEY ("transport_id") REFERENCES "public"."transports"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_sender_id_users_id_fk" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "organs" ADD CONSTRAINT "organs_donor_id_donors_id_fk" FOREIGN KEY ("donor_id") REFERENCES "public"."donors"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transports" ADD CONSTRAINT "transports_organ_id_organs_id_fk" FOREIGN KEY ("organ_id") REFERENCES "public"."organs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transports" ADD CONSTRAINT "transports_allocation_id_allocations_id_fk" FOREIGN KEY ("allocation_id") REFERENCES "public"."allocations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "organs" ADD CONSTRAINT "organs_donor_id_donors_id_fk" FOREIGN KEY ("donor_id") REFERENCES "public"."donors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "transports" ADD CONSTRAINT "transports_organ_id_organs_id_fk" FOREIGN KEY ("organ_id") REFERENCES "public"."organs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "transports" ADD CONSTRAINT "transports_allocation_id_allocations_id_fk" FOREIGN KEY ("allocation_id") REFERENCES "public"."allocations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transports" ADD CONSTRAINT "transports_courier_id_users_id_fk" FOREIGN KEY ("courier_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "idx_allocations_status" ON "allocations" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "idx_audit_logs_timestamp" ON "audit_logs" USING btree ("timestamp");--> statement-breakpoint
 CREATE INDEX "idx_audit_logs_user_id" ON "audit_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "idx_audit_logs_entity" ON "audit_logs" USING btree ("entity_type","entity_id");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_action" ON "audit_logs" USING btree ("action");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_action_category" ON "audit_logs" USING btree ("action_category");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_session_id" ON "audit_logs" USING btree ("session_id");--> statement-breakpoint
-CREATE INDEX "idx_audit_logs_phi_accessed" ON "audit_logs" USING btree ("phi_accessed");--> statement-breakpoint
 CREATE INDEX "idx_auth_audit_timestamp" ON "auth_audit_logs" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "idx_auth_audit_user_id" ON "auth_audit_logs" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "idx_auth_audit_event_type" ON "auth_audit_logs" USING btree ("event_type");--> statement-breakpoint
-CREATE INDEX "idx_auth_audit_ip_address" ON "auth_audit_logs" USING btree ("ip_address");--> statement-breakpoint
-CREATE INDEX "idx_auth_audit_session_id" ON "auth_audit_logs" USING btree ("session_id");--> statement-breakpoint
-CREATE INDEX "idx_sessions_expire" ON "sessions" USING btree ("expire");
+CREATE INDEX "idx_donors_status" ON "donors" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "idx_donors_consent_status" ON "donors" USING btree ("consent_status");--> statement-breakpoint
+CREATE INDEX "idx_organs_status" ON "organs" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "idx_organs_blood_type" ON "organs" USING btree ("blood_type");--> statement-breakpoint
+CREATE INDEX "idx_recipients_status" ON "recipients" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "idx_sessions_expire" ON "sessions" USING btree ("expire");--> statement-breakpoint
+CREATE INDEX "idx_transports_status" ON "transports" USING btree ("status");

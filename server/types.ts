@@ -4,37 +4,30 @@ import type { Request } from "express";
 import type { UserRole } from "../shared/schema.js";
 
 /**
- * Standardized JWT claims used everywhere
+ * ✅ Standardized JWT claims used across the app
  */
 export interface CustomJwtClaims {
-  sub: string;
+  sub: string;              // Subject (usually user ID)
   email?: string;
   name?: string;
-  [key: string]: any;
+  [key: string]: any;       // Allow for additional claims
 }
 
 /**
- * Shared AuthenticatedRequest type used across middleware + routes
+ * ✅ AuthenticatedRequest used in middleware and routes
  */
 export interface AuthenticatedRequest extends Request {
   user?: {
     claims: CustomJwtClaims;
-    /**
-     * Role is usually populated from JWT or DB. Keep optional at type level
-     * to avoid compile errors in places where it isn't attached yet.
-     */
-    role?: UserRole;
+    role?: UserRole;         // Optional to prevent strict issues pre-population
     department?: string;
   };
-  /**
-   * Express-session exposes `sessionID` on Request; add here for convenience.
-   */
-  sessionID?: string;
+  sessionID?: string;        // Express-session support
 }
 
 /**
- * Express Request augmentation so `req.user` is recognized everywhere
- * without importing AuthenticatedRequest. This is safe and optional.
+ * ✅ Global Express type augmentation
+ * Enables access to `req.user` and `req.sessionID` without importing AuthenticatedRequest
  */
 declare module "express-serve-static-core" {
   interface Request {
@@ -47,4 +40,5 @@ declare module "express-serve-static-core" {
   }
 }
 
+// ✅ Re-export UserRole for convenience
 export type { UserRole };

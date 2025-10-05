@@ -8,8 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
-
-import queryClient from "@/lib/queryClient"; // ✅ shared QueryClient instance
+import queryClient from "@/lib/queryClient";
 
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
@@ -21,7 +20,7 @@ import Transport from "@/pages/Transport";
 
 // ✅ Authenticated Layout
 function AuthenticatedLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const style: React.CSSProperties = {
     ["--sidebar-width" as any]: "16rem",
@@ -46,11 +45,10 @@ function AuthenticatedLayout() {
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <button
-                onClick={() => {
-                  window.location.href = "/api/logout";
-                }}
+                onClick={logout}
                 className="text-sm text-muted-foreground hover:text-foreground"
                 data-testid="button-logout"
+                aria-label="Logout"
               >
                 Sign Out
               </button>
@@ -66,7 +64,7 @@ function AuthenticatedLayout() {
   );
 }
 
-// ✅ Router with Loading Guard
+// ✅ Router with Auth Guard + Loading State
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -140,7 +138,15 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="lifebridge-ui-theme">
         <TooltipProvider>
-          <Router />
+          <React.Suspense
+            fallback={
+              <div className="flex items-center justify-center min-h-screen">
+                <p>Loading LifeBridge...</p>
+              </div>
+            }
+          >
+            <Router />
+          </React.Suspense>
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>

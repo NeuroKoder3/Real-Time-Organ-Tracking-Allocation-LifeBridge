@@ -19,6 +19,13 @@ const refreshLimiter = rateLimit({
 const isProd = process.env.NODE_ENV === "production";
 
 // ---------------------------------------------------------
+// Demo credentials
+// ---------------------------------------------------------
+const DEMO_EMAIL = "demo@lifebridge.online";
+const DEMO_PASSWORD = "Demo1234";
+const DEMO_USER_ID = "demo-user-id";
+
+// ---------------------------------------------------------
 // Storage adapters
 // ---------------------------------------------------------
 const has = {
@@ -165,7 +172,7 @@ router.post("/register", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------
-// Login
+// Login (with demo credentials support)
 // ---------------------------------------------------------
 router.post("/login", async (req: Request, res: Response) => {
   const parsed = loginSchema.safeParse(req.body);
@@ -178,6 +185,35 @@ router.post("/login", async (req: Request, res: Response) => {
   const { email, password } = parsed.data;
 
   try {
+    // 1️⃣ DEMO LOGIN BYPASS
+    if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+      const payload = { sub: DEMO_USER_ID, email: DEMO_EMAIL, role: "coordinator" };
+      const { accessToken, refreshToken } = generateTokens(payload);
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      const csrfToken =
+        typeof (req as any).csrfToken === "function"
+          ? (req as any).csrfToken()
+          : undefined;
+
+      return res.json({
+        id: DEMO_USER_ID,
+        email: DEMO_EMAIL,
+        firstName: "Demo",
+        lastName: "User",
+        role: "coordinator",
+        token: accessToken,
+        csrfToken,
+      });
+    }
+
+    // 2️⃣ Normal login
     const user = await adapterGetUserByEmail(email);
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -280,6 +316,27 @@ router.post("/logout", (req: Request, res: Response) => {
       : undefined;
 
   return res.json({ message: "Logged out successfully", csrfToken });
+});
+
+// ---------------------------------------------------------
+// Dev-only: seed demo user in memory
+// ---------------------------------------------------------
+router.post("/_seed-demo", async (_req, res) => {
+  if (process.env.NODE_ENV !== "development") {
+    return res.status(403).json({ message: "Forbidden in production" });
+  }
+
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+
+  devUsers.set(DEMO_EMAIL, {
+    id: DEMO_USER_ID,
+    email: DEMO_EMAIL,
+    name: "Demo User",
+    role: "coordinator",
+    passwordHash,
+  });
+
+  return res.json({ message: "Demo user created" });
 });
 
 export default router;

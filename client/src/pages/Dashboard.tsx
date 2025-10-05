@@ -15,8 +15,25 @@ import {
   Activity,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import type { Organ, Recipient } from "@shared/schema";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
+
+// 🔒 Secure helpers
+async function getCsrfToken() {
+  try {
+    const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
+    const data = await res.json();
+    return data?.csrfToken;
+  } catch {
+    return undefined;
+  }
+}
+
+function getAuthToken() {
+  return localStorage.getItem("token");
+}
 
 interface Transport {
   id: string;
@@ -27,18 +44,16 @@ interface Transport {
   eta: string;
 }
 
-// Organ viability timer component
+// ----------------------------
+// Organ Viability Card
+// ----------------------------
 function OrganViabilityCard({ organ }: { organ: Organ }) {
   const totalHours = organ.viabilityHours;
   const elapsedHours = Math.floor(
-    (Date.now() - new Date(organ.preservationStartTime).getTime()) /
-      (1000 * 60 * 60)
+    (Date.now() - new Date(organ.preservationStartTime).getTime()) / (1000 * 60 * 60)
   );
   const remainingHours = totalHours - elapsedHours;
-  const progressPercentage = Math.max(
-    0,
-    Math.min(100, (remainingHours / totalHours) * 100)
-  );
+  const progressPercentage = Math.max(0, Math.min(100, (remainingHours / totalHours) * 100));
 
   const urgencyColor: "default" | "secondary" | "destructive" =
     remainingHours < 2 ? "destructive" : remainingHours < 4 ? "secondary" : "default";
@@ -79,7 +94,9 @@ function OrganViabilityCard({ organ }: { organ: Organ }) {
   );
 }
 
-// Transport status card component
+// ----------------------------
+// Transport Card
+// ----------------------------
 function TransportCard({ transport }: { transport: Transport }) {
   const statusColors: Record<string, "default" | "secondary" | "destructive"> = {
     scheduled: "secondary",
@@ -102,16 +119,16 @@ function TransportCard({ transport }: { transport: Transport }) {
         </div>
       </div>
       <div className="text-right">
-        <Badge variant={statusColors[transport.status] ?? "default"}>
-          {transport.status}
-        </Badge>
+        <Badge variant={statusColors[transport.status] ?? "default"}>{transport.status}</Badge>
         <p className="text-xs text-muted-foreground mt-1">ETA: {transport.eta}</p>
       </div>
     </div>
   );
 }
 
-// Stats card component
+// ----------------------------
+// Stats Card
+// ----------------------------
 function StatsCard({
   title,
   value,
@@ -142,9 +159,7 @@ function StatsCard({
               <ArrowDownRight className="h-3 w-3 text-red-600" />
             )}
             <span
-              className={`text-xs ${
-                trend.isPositive ? "text-green-600" : "text-red-600"
-              }`}
+              className={`text-xs ${trend.isPositive ? "text-green-600" : "text-red-600"}`}
             >
               {Math.abs(trend.value)}%
             </span>
@@ -155,21 +170,46 @@ function StatsCard({
   );
 }
 
+// ----------------------------
+// Dashboard Page
+// ----------------------------
 export default function Dashboard() {
-  // ✅ Fetch live data
+  const { toast } = useToast();
+
+  // Secure fetch wrapper
+  const fetchWithAuth = async <T,>(url: string): Promise<T> => {
+    const token = getAuthToken();
+    const res = await fetch(`${API_BASE}${url}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
+    });
+    if (!res.ok) {
+      toast({
+        title: "Error Loading Data",
+        description: `Failed to load ${url}`,
+        variant: "destructive",
+      });
+      throw new Error(await res.text());
+    }
+    return res.json();
+  };
+
+  // ✅ Queries
   const { data: organs = [] } = useQuery({
-    queryKey: ["/api/organs"],
-    queryFn: () => api<Organ[]>("/api/organs"),
+    queryKey: ["organs"],
+    queryFn: () => fetchWithAuth<Organ[]>("/api/organs"),
+    refetchInterval: 30000, // auto-refresh every 30s
   });
 
   const { data: transports = [] } = useQuery({
-    queryKey: ["/api/transports"],
-    queryFn: () => api<Transport[]>("/api/transports"),
+    queryKey: ["transports"],
+    queryFn: () => fetchWithAuth<Transport[]>("/api/transports"),
+    refetchInterval: 30000,
   });
 
   const { data: recipients = [] } = useQuery({
-    queryKey: ["/api/recipients"],
-    queryFn: () => api<Recipient[]>("/api/recipients"),
+    queryKey: ["recipients"],
+    queryFn: () => fetchWithAuth<Recipient[]>("/api/recipients"),
   });
 
   return (
@@ -207,8 +247,7 @@ export default function Dashboard() {
             {organs
               .filter((o) => {
                 const elapsed =
-                  (Date.now() - new Date(o.preservationStartTime).getTime()) /
-                  (1000 * 60 * 60);
+                  (Date.now() - new Date(o.preservationStartTime).getTime()) / (1000 * 60 * 60);
                 return o.viabilityHours - elapsed < 2;
               })
               .map((o) => (
@@ -222,11 +261,7 @@ export default function Dashboard() {
                       {o.organType} at {o.currentLocation ?? "Unknown"} - Critical viability
                     </span>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    data-testid="button-urgent-allocate"
-                  >
+                  <Button size="sm" variant="destructive">
                     Urgent Allocate
                   </Button>
                 </div>
@@ -277,11 +312,7 @@ export default function Dashboard() {
                 Organs ready for allocation with viability timers
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              data-testid="button-view-all-organs"
-            >
+            <Button variant="outline" size="sm">
               View All
             </Button>
           </div>
@@ -295,19 +326,17 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Transport and Recipients Grid */}
+      {/* Transports and Recipients */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active Transports */}
+        {/* Transports */}
         <Card>
           <CardHeader>
             <CardTitle>Active Transports</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Real-time transport tracking
-            </p>
+            <p className="text-sm text-muted-foreground">Real-time transport tracking</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {transports.map((transport) => (
-              <TransportCard key={transport.id} transport={transport} />
+            {transports.map((t) => (
+              <TransportCard key={t.id} transport={t} />
             ))}
           </CardContent>
         </Card>
@@ -316,43 +345,37 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Top Recipient Matches</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Highest compatibility scores
-            </p>
+            <p className="text-sm text-muted-foreground">Highest compatibility scores</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recipients.map((recipient) => (
+              {recipients.slice(0, 5).map((r) => (
                 <div
-                  key={recipient.id}
+                  key={r.id}
                   className="flex items-center justify-between p-3 border rounded-lg"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                      <p className="font-medium text-sm">
-                        {recipient.firstName} {recipient.lastName}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Wait: {(recipient as any).waitTime ?? "N/A"}</span>
-                        <span>•</span>
-                        <span>{recipient.location ?? "Unknown"}</span>
-                      </div>
+                  <div className="flex flex-col">
+                    <p className="font-medium text-sm">
+                      {r.firstName} {r.lastName}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{r.organNeeded ?? "Unknown Organ"}</span>
+                      <span>•</span>
+                      <span>{r.hospital ?? "Unknown Hospital"}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={
-                        (recipient as any).urgencyStatus === "1A"
+                        r.urgencyStatus?.toLowerCase() === "critical"
                           ? "destructive"
                           : "secondary"
                       }
                     >
-                      {(recipient as any).urgencyStatus}
+                      {r.urgencyStatus ?? "Routine"}
                     </Badge>
                     <div className="text-right">
-                      <p className="text-sm font-bold">
-                        {(recipient as any).matchScore ?? 0}%
-                      </p>
+                      <p className="text-sm font-bold">{(r as any).matchScore ?? 0}%</p>
                       <p className="text-xs text-muted-foreground">match</p>
                     </div>
                   </div>
@@ -372,18 +395,18 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-green-500 rounded-full" />
               <span className="text-muted-foreground">2 min ago</span>
               <span>Heart successfully transplanted at Johns Hopkins</span>
             </div>
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-blue-500 rounded-full" />
               <span className="text-muted-foreground">15 min ago</span>
               <span>New kidney registered from Mayo Clinic</span>
             </div>
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-yellow-500 rounded-full" />
               <span className="text-muted-foreground">1 hour ago</span>
               <span>Transport initiated for liver to Cleveland Clinic</span>

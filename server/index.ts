@@ -15,7 +15,9 @@ if (fs.existsSync(".env")) {
 // Must come after dotenv
 import "./config/env.js";
 
-// ✅ Validate critical environment variables (warn instead of hard-crash in prod)
+// ---------------------------------------------------------
+// ✅ Validate critical environment variables
+// ---------------------------------------------------------
 const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"] as const;
 for (const key of requiredEnv) {
   if (!process.env[key]) {
@@ -53,24 +55,31 @@ const __dirname = path.dirname(__filename);
 // ---------------------------------------------------------
 // ✅ Create Express App
 // ---------------------------------------------------------
-const app: Express = express(); // explicit type
+const app: Express = express();
 
 // ---------------------------------------------------------
-// ✅ CORS (Netlify + local dev) with credentials
+// ✅ Dynamic + Secure CORS Configuration
 // ---------------------------------------------------------
-const allowedOrigins = [
-  "http://localhost:5173",
+const defaultAllowedOrigins = [
+  "https://lifebridge.netlify.app", // ✅ Production frontend (Netlify)
+  "https://api.lifebridge.online", // ✅ Cloudflare tunnel / API domain
+  "http://localhost:5173", // ✅ Local Vite dev
   "http://127.0.0.1:5173",
-  "https://lifebridge-opotracking.netlify.app", // your Netlify site
+  "http://localhost:5000", // ✅ Local backend self-call
 ];
+
+const envOrigins = process.env.FRONTEND_URL?.split(",").map((o) => o.trim()) ?? [];
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
 
 app.use(
   cors({
-    origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        cb(null, true);
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true); // Allow Postman, curl, etc.
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       } else {
-        cb(null, false);
+        console.warn(`🚫 CORS blocked request from origin: ${origin}`);
+        return callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
@@ -78,7 +87,7 @@ app.use(
 );
 
 // ---------------------------------------------------------
-// ✅ Security Middleware (CSP allows Google Fonts & API)
+// ✅ Security Middleware (Helmet + CSP)
 // ---------------------------------------------------------
 app.use(
   helmet({
@@ -88,14 +97,7 @@ app.use(
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "https:"],
-        // allow https (any) + ws/wss for dev tools and your api domain
-        connectSrc: [
-          "'self'",
-          "https:",
-          "ws:",
-          "wss:",
-          "https://api.lifebridge.online",
-        ],
+        connectSrc: ["'self'", "https:", "wss:", ...allowedOrigins],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
@@ -108,29 +110,34 @@ app.use(
 app.use(cookieParser());
 
 // ---------------------------------------------------------
-// ✅ CSRF protection (cookie mode)
-//    NOTE: cross-site cookies require SameSite=None; Secure
+// ✅ CSRF protection (cookie-based)
 // ---------------------------------------------------------
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
-  const csrfProtection = csurf({
+  const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
-      secure: isProd,                // must be true for SameSite=None
-      sameSite: isProd ? "none" : "lax", // cross-site from Netlify -> api.*
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
     },
   }) as unknown as RequestHandler;
 
-  app.use(csrfProtection);
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === "/api/auth/_seed-demo") {
+      return next();
+    }
+    return csrfMiddleware(req, res, next);
+  });
+
   app.get("/api/csrf-token", (req: Request, res: Response) => {
-    res.json({ csrfToken: (req as any).csrfToken() });
+    res.json({ csrfToken: (req as any).csrfToken?.() });
   });
 }
 
 // ---------------------------------------------------------
 // ✅ Core Middleware
 // ---------------------------------------------------------
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
 // ✅ Request Logging Middleware
@@ -154,9 +161,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
           logLine += " :: [Unserializable JSON]";
         }
       }
-      if (logLine.length > 200) {
-        logLine = logLine.slice(0, 199) + "…";
-      }
+      if (logLine.length > 200) logLine = logLine.slice(0, 199) + "…";
       log(logLine);
     }
   });
@@ -169,12 +174,17 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
 });
+
 app.get("/healthz", (_req: Request, res: Response) => {
   res.send("ok");
 });
+
 app.get("/api/test/encryption-status", (_req: Request, res: Response) => {
   try {
-    res.status(200).json({ encrypted: true, timestamp: new Date().toISOString() });
+    res.status(200).json({
+      encrypted: true,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error) {
     console.error("[Health Check] Error:", error);
     res.status(500).json({ encrypted: false, error: "Health check failed" });
@@ -182,47 +192,56 @@ app.get("/api/test/encryption-status", (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------
-// ✅ Error Handler (before SPA static/fallback)
+// ✅ Register API Routes
+// ---------------------------------------------------------
+await registerRoutes(app);
+
+// ---------------------------------------------------------
+// ✅ Global Error Handler
 // ---------------------------------------------------------
 app.use(errorHandler);
 
 // ---------------------------------------------------------
-// ✅ Export for testing and external usage
+// ✅ Bootstrapping Server
 // ---------------------------------------------------------
-export default app;
+(async () => {
+  try {
+    const port = parseInt(process.env.PORT || "5000", 10);
 
-// ---------------------------------------------------------
-// ✅ Start server if run directly (ESM-safe check)
-// ---------------------------------------------------------
-const isDirectRun = process.argv[1] && path.resolve(process.argv[1]).includes("server/index");
-if (isDirectRun) {
-  (async () => {
-    try {
-      const server = await registerRoutes(app);
-      if (app.get("env") === "development") {
-        await setupVite(app, server);
-      } else {
-        // ✅ Serve built frontend from client/dist
-        serveStatic(app);
-        // Apply rate limiting to catch-all file serving route
-        const frontendLimiter = rateLimit({
-          windowMs: 15 * 60 * 1000, // 15 minutes
-          max: 100, // max 100 requests per windowMs per IP
-        });
-        app.get("*", frontendLimiter, (req: Request, res: Response) => {
-          if (req.path.startsWith("/api")) {
-            return res.status(404).json({ message: "Not found" });
-          }
-          res.sendFile(path.resolve(process.cwd(), "client", "dist", "index.html"));
-        });
-      }
-      const port = parseInt(process.env.PORT || "5000", 10);
-      server.listen({ port, host: "0.0.0.0" }, () => {
-        log(`[Server] Running on http://localhost:${port}`);
+    if (app.get("env") === "development") {
+      const http = await import("http");
+      const server = http.createServer(app);
+
+      await setupVite(app, server);
+
+      server.listen(port, "0.0.0.0", () => {
+        log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
+        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
       });
-    } catch (error) {
-      console.error("[Server Init] Failed to start:", error);
-      process.exit(1);
+    } else {
+      serveStatic(app);
+
+      const frontendLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 100,
+      });
+
+      app.get("*", frontendLimiter, (req: Request, res: Response) => {
+        if (req.path.startsWith("/api")) {
+          return res.status(404).json({ message: "Not found" });
+        }
+        res.sendFile(path.resolve(process.cwd(), "client", "dist", "index.html"));
+      });
+
+      app.listen(port, "0.0.0.0", () => {
+        log(`[Server] 🌐 Running on port ${port}`);
+        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
+      });
     }
-  })();
-}
+  } catch (error) {
+    console.error("[Server Init] ❌ Failed to start:", error);
+    process.exit(1);
+  }
+})();
+
+export default app;

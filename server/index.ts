@@ -61,11 +61,12 @@ const app: Express = express();
 // ✅ Dynamic + Secure CORS Configuration
 // ---------------------------------------------------------
 const defaultAllowedOrigins = [
-  "https://lifebridge.netlify.app", // ✅ Production frontend (Netlify)
-  "https://api.lifebridge.online", // ✅ Cloudflare tunnel / API domain
-  "http://localhost:5173", // ✅ Local Vite dev
+  "https://lifebridge.netlify.app",
+  "https://lifebridge-orgtracking.netlify.app", // ✅ ADDED for working CORS
+  "https://api.lifebridge.online",
+  "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "http://localhost:5000", // ✅ Local backend self-call
+  "http://localhost:5000",
 ];
 
 const envOrigins = process.env.FRONTEND_URL?.split(",").map((o) => o.trim()) ?? [];

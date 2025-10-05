@@ -2,6 +2,7 @@
 
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import rateLimit from "express-rate-limit";
 import { storage as baseStorage } from "./storage.js";
 import { createRBACStorage } from "./rbacStorage.js"; // ✅ RBAC everywhere
 import { createManualAuditLog } from "./auditMiddleware.js"; // ✅ FIXED LINE
@@ -14,6 +15,14 @@ import unosService from "./integrations/unosService.js";
 import complianceReports from "./complianceReports.js";
 import complianceStatus from "./complianceStatus.js";
 
+
+
+// Rate limiter for audit-logs endpoint: max 5 requests per minute per IP
+const auditLogsRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: { message: "Too many requests to audit logs, please try again later." }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/auth", authRoutes);
@@ -323,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ---------------- AUDIT LOGS ----------------
-  app.get("/api/audit-logs", authenticateToken, async (req: Request, res: Response) => {
+  app.get("/api/audit-logs", authenticateToken, auditLogsRateLimiter, async (req: Request, res: Response) => {
     try {
       const { user } = req as AuthenticatedRequest;
       const storage = createRBACStorage(baseStorage, user?.role as UserRole, user?.claims?.sub);

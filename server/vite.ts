@@ -1,5 +1,6 @@
 // server/vite.ts
 import express, { Express } from "express";
+import rateLimit from "express-rate-limit";
 import fs from "fs";
 import path, { resolve } from "path";
 import { createServer as createViteServer, createLogger, InlineConfig, ViteDevServer } from "vite";
@@ -82,6 +83,16 @@ export async function setupVite(app: Express, server: any): Promise<void> {
   });
 
   app.use(vite.middlewares);
+
+  // Apply rate limiting to dev HTML handler to limit filesystem reads
+  const devLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // max 100 requests per window per IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Too many requests, please try again later.",
+  });
+  app.use("*", devLimiter);
 
   app.use("*", async (req, res, next) => {
     try {

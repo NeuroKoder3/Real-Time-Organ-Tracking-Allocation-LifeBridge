@@ -62,7 +62,7 @@ const app: Express = express();
 // ---------------------------------------------------------
 const defaultAllowedOrigins = [
   "https://lifebridge.netlify.app",
-  "https://lifebridge-orgtracking.netlify.app", // ✅ ADDED for working CORS
+  "https://lifebridge-opotracking.netlify.app", // ✅ ADDED for working CORS
   "https://api.lifebridge.online",
   "http://localhost:5173",
   "http://127.0.0.1:5173",

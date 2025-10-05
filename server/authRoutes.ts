@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type RequestHandler } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import storage from "./storage.js";
@@ -7,15 +7,17 @@ import {
   authenticateRefreshToken,
 } from "./middleware/sessionMiddleware.js";
 import rateLimit from "express-rate-limit";
+
 const router: Router = Router();
 
-// Rate limiter for refresh endpoint
+// ✅ Rate limiter for refresh endpoint (cast to RequestHandler for TS)
 const refreshLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5,                  // limit each IP to 5 requests per windowMs
+  max: 5, // limit each IP to 5 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
-});
+}) as RequestHandler;
+
 const isProd = process.env.NODE_ENV === "production";
 
 // ---------------------------------------------------------
@@ -268,9 +270,10 @@ router.post("/login", async (req: Request, res: Response) => {
 // ---------------------------------------------------------
 // Refresh
 // ---------------------------------------------------------
+// ✅ Correct order: path string first, then limiter, then middleware, then handler
 router.post(
-  refreshLimiter,
   "/refresh",
+  refreshLimiter,
   authenticateRefreshToken,
   async (req: RefreshRequest, res: Response) => {
     try {
@@ -297,7 +300,7 @@ router.post(
         }),
       });
     }
-  },
+  }
 );
 
 // ---------------------------------------------------------

@@ -6,17 +6,11 @@
 const BASE_URL =
   import.meta.env.MODE === "development"
     ? "http://localhost:5000"
-    : import.meta.env.VITE_API_URL?.trim() || "";
+    : ""; // use relative path in production for Netlify proxy
 
 // ✅ Log only in development
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);
-}
-
-if (!BASE_URL) {
-  console.error(
-    "[API] ❌ VITE_API_URL is missing. Set it in your environment (e.g., Netlify dashboard)."
-  );
 }
 
 /**
@@ -49,7 +43,7 @@ export async function api<T = unknown>(
     ...(options.headers || {}),
   };
 
-  // ✅ Force credentials for cross-domain cookies (CORS safe)
+  // ✅ Always include credentials for cookie/session authentication
   const fetchOptions: RequestInit = {
     ...options,
     headers,

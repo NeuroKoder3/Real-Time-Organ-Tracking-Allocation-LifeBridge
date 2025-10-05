@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import rateLimit from "express-rate-limit";
 if (fs.existsSync(".env")) {
   dotenv.config();
 } else {
@@ -204,7 +204,12 @@ if (isDirectRun) {
       } else {
         // ✅ Serve built frontend from client/dist
         serveStatic(app);
-        app.get("*", (req: Request, res: Response) => {
+        // Apply rate limiting to catch-all file serving route
+        const frontendLimiter = rateLimit({
+          windowMs: 15 * 60 * 1000, // 15 minutes
+          max: 100, // max 100 requests per windowMs per IP
+        });
+        app.get("*", frontendLimiter, (req: Request, res: Response) => {
           if (req.path.startsWith("/api")) {
             return res.status(404).json({ message: "Not found" });
           }

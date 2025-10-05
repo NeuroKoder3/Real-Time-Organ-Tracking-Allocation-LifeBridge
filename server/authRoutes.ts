@@ -6,8 +6,16 @@ import {
   generateTokens,
   authenticateRefreshToken,
 } from "./middleware/sessionMiddleware.js";
-
+import rateLimit from "express-rate-limit";
 const router: Router = Router();
+
+// Rate limiter for refresh endpoint
+const refreshLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5,                  // limit each IP to 5 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 const isProd = process.env.NODE_ENV === "production";
 
 // ---------------------------------------------------------
@@ -225,6 +233,7 @@ router.post("/login", async (req: Request, res: Response) => {
 // Refresh
 // ---------------------------------------------------------
 router.post(
+  refreshLimiter,
   "/refresh",
   authenticateRefreshToken,
   async (req: RefreshRequest, res: Response) => {

@@ -55,19 +55,12 @@ const __dirname = path.dirname(__filename);
 const app: Express = express(); // ✅ Type annotation added (fixes TS2742)
 
 // ---------------------------------------------------------
-// ✅ Allowed Origins — simplified & guaranteed
+// ✅ Allowed Origins — cleaned & corrected
 // ---------------------------------------------------------
-<<<<<<< HEAD
-const defaultAllowedOrigins = [
-  "https://lifebridge.netlify.app",
-  "https://lifebridge-opotracking.netlify.app", // ✅ ADDED for working CORS
-  "https://api.lifebridge.online",
-=======
 const allowedOrigins = [
   "https://lifebridge-opotracking.netlify.app",
   "https://api.lifebridge.online",
   "https://lifebridge.online",
->>>>>>> 71ee010 (Update: Added new files and updated existing ones)
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:5000",

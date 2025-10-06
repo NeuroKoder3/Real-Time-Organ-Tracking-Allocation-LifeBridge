@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
+
 if (fs.existsSync(".env")) {
   dotenv.config();
 } else {
@@ -18,15 +19,12 @@ import "./config/env.js";
 // ---------------------------------------------------------
 // ✅ Validate critical environment variables
 // ---------------------------------------------------------
-const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"] as const;
+const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"];
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     const msg = `❌ ${key} must be set in your environment`;
-    if (process.env.NODE_ENV === "production") {
-      console.error(msg);
-    } else {
-      throw new Error(msg);
-    }
+    if (process.env.NODE_ENV === "production") console.error(msg);
+    else throw new Error(msg);
   }
 }
 
@@ -34,16 +32,15 @@ for (const key of requiredEnv) {
 // ✅ Imports AFTER dotenv.config()
 // ---------------------------------------------------------
 import express, {
+  type Express,
   type Request,
   type Response,
   type NextFunction,
   type RequestHandler,
-  type Express,
 } from "express";
 import helmet from "helmet";
 import csurf from "csurf";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
@@ -55,55 +52,55 @@ const __dirname = path.dirname(__filename);
 // ---------------------------------------------------------
 // ✅ Create Express App
 // ---------------------------------------------------------
-const app: Express = express();
+const app: Express = express(); // ✅ Type annotation added (fixes TS2742)
 
 // ---------------------------------------------------------
-// ✅ Dynamic + Secure CORS Configuration
+// ✅ Allowed Origins — simplified & guaranteed
 // ---------------------------------------------------------
+<<<<<<< HEAD
 const defaultAllowedOrigins = [
   "https://lifebridge.netlify.app",
   "https://lifebridge-opotracking.netlify.app", // ✅ ADDED for working CORS
   "https://api.lifebridge.online",
+=======
+const allowedOrigins = [
+  "https://lifebridge-opotracking.netlify.app",
+  "https://api.lifebridge.online",
+  "https://lifebridge.online",
+>>>>>>> 71ee010 (Update: Added new files and updated existing ones)
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:5000",
 ];
 
-const envOrigins = process.env.FRONTEND_URL?.split(",").map((o) => o.trim()) ?? [];
-const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
+// ---------------------------------------------------------
+// ✅ CORS Middleware — universal & strict-compliant
+// ---------------------------------------------------------
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Vary", "Origin");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // Allow Postman, curl, etc.
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        console.warn(`🚫 CORS blocked request from origin: ${origin}`);
-        return callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // ---------------------------------------------------------
 // ✅ Security Middleware (Helmet + CSP)
 // ---------------------------------------------------------
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https:", "wss:", ...allowedOrigins],
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
-      },
-    },
+    contentSecurityPolicy: false, // Disabled for cross-domain API compatibility
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -115,6 +112,8 @@ app.use(cookieParser());
 // ---------------------------------------------------------
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
+
+  // ✅ Properly typed CSRF middleware
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -123,8 +122,9 @@ if (process.env.NODE_ENV !== "test") {
     },
   }) as unknown as RequestHandler;
 
+  // ✅ Correctly scoped CSRF exclusion
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/api/auth/_seed-demo") {
+    if (req.path.startsWith("/api/auth/_seed-demo")) {
       return next();
     }
     return csrfMiddleware(req, res, next);
@@ -141,29 +141,13 @@ if (process.env.NODE_ENV !== "test") {
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
-// ✅ Request Logging Middleware
+// ✅ Logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
-  const pathName = req.path;
-  let capturedJsonResponse: unknown;
-  const originalResJson = res.json.bind(res);
-  res.json = function (body: any) {
-    capturedJsonResponse = body;
-    return originalResJson(body);
-  };
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (pathName.startsWith("/api")) {
-      let logLine = `[API] ${req.method} ${pathName} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        try {
-          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-        } catch {
-          logLine += " :: [Unserializable JSON]";
-        }
-      }
-      if (logLine.length > 200) logLine = logLine.slice(0, 199) + "…";
-      log(logLine);
+    if (req.path.startsWith("/api")) {
+      log(`[API] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
     }
   });
   next();
@@ -176,21 +160,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
 });
 
-app.get("/healthz", (_req: Request, res: Response) => {
-  res.send("ok");
-});
-
-app.get("/api/test/encryption-status", (_req: Request, res: Response) => {
-  try {
-    res.status(200).json({
-      encrypted: true,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("[Health Check] Error:", error);
-    res.status(500).json({ encrypted: false, error: "Health check failed" });
-  }
-});
+app.get("/healthz", (_req: Request, res: Response) => res.send("ok"));
 
 // ---------------------------------------------------------
 // ✅ Register API Routes
@@ -212,31 +182,21 @@ app.use(errorHandler);
     if (app.get("env") === "development") {
       const http = await import("http");
       const server = http.createServer(app);
-
       await setupVite(app, server);
-
       server.listen(port, "0.0.0.0", () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
-        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
       });
     } else {
       serveStatic(app);
-
-      const frontendLimiter = rateLimit({
+      const limiter = rateLimit({
         windowMs: 15 * 60 * 1000,
         max: 100,
       });
-
-      app.get("*", frontendLimiter, (req: Request, res: Response) => {
-        if (req.path.startsWith("/api")) {
-          return res.status(404).json({ message: "Not found" });
-        }
-        res.sendFile(path.resolve(process.cwd(), "client", "dist", "index.html"));
-      });
+      app.use(limiter);
 
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
+        log(`[Server] ✅ CORS Origins: ${allowedOrigins.join(", ")}`);
       });
     }
   } catch (error) {

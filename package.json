@@ -81,6 +81,7 @@
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.1",
     "framer-motion": "^11.13.1",
     "helmet": "^8.1.0",
@@ -114,8 +115,7 @@
     "vite": "^7.1.7",
     "ws": "^8.18.0",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0",
-    "express-rate-limit": "^8.1.0"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",
@@ -126,6 +126,7 @@
     "@types/cors": "^2.8.19",
     "@types/csurf": "^1.11.5",
     "@types/express": "4.17.21",
+    "@types/express-rate-limit": "^6.0.2",
     "@types/express-serve-static-core": "^5.0.7",
     "@types/express-session": "^1.18.0",
     "@types/jest": "^29.5.12",
@@ -163,4 +164,3 @@
     "react-router-dom": "6.30.1"
   }
 }
-    

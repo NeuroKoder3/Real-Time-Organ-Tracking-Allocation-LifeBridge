@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Heart,
   MapPin,
   Users,
   BarChart3,
@@ -15,6 +14,9 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+
+// ✅ Import your logo
+import lifebridgeLogo from "@/assets/lifebridge-logo.jpg";
 
 // -----------------------------
 // Environment + Config
@@ -38,12 +40,6 @@ export default function Landing() {
   const [error, setError] = useState("");
 
   const features: Feature[] = [
-    {
-      icon: Heart,
-      title: "Real-Time Organ Tracking",
-      description:
-        "Live organ inventory with viability countdown timers. Track hearts (4–6 hrs), kidneys (24–36 hrs), and more.",
-    },
     {
       icon: Users,
       title: "Intelligent Recipient Matching",
@@ -143,16 +139,19 @@ export default function Landing() {
   // -----------------------------
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
-      {/* Header */}
+      {/* ✅ Header Updated */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">LifeBridge</h1>
-          </div>
-          <span className="text-xs text-muted-foreground hidden sm:block">
-            {API_URL.replace(/^https?:\/\//, "")}
-          </span>
+          {/* ✅ Clickable Logo */}
+          <button onClick={() => navigate("/")} className="flex items-center gap-2">
+            <img
+              src={lifebridgeLogo}
+              alt="LifeBridge Logo"
+              className="h-10 w-auto object-contain"
+            />
+          </button>
+
+          {/* ❌ Removed API URL */}
         </div>
       </header>
 

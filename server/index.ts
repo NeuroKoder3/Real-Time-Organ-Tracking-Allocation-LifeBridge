@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
+import fetch from "node-fetch"; // ✅ NEW: used for auto-seed
 
 if (fs.existsSync(".env")) {
   dotenv.config();
@@ -93,7 +94,7 @@ app.use((req, res, next) => {
 // ---------------------------------------------------------
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Disabled for cross-domain API compatibility
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -106,7 +107,6 @@ app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
 
-  // ✅ Properly typed CSRF middleware
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -115,7 +115,6 @@ if (process.env.NODE_ENV !== "test") {
     },
   }) as unknown as RequestHandler;
 
-  // ✅ Correctly scoped CSRF exclusion
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/auth/_seed-demo")) {
       return next();
@@ -176,6 +175,18 @@ app.use(errorHandler);
       const http = await import("http");
       const server = http.createServer(app);
       await setupVite(app, server);
+
+      // 🌱 Seed the demo user automatically
+      try {
+        const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
+          method: "POST",
+        });
+        const data = await res.json();
+        log(`[Server] 🌱 Demo user seeded: ${data.message}`);
+      } catch (err) {
+        console.error("[Server] ❌ Failed to seed demo user", err);
+      }
+
       server.listen(port, "0.0.0.0", () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
       });

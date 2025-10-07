@@ -1,4 +1,4 @@
-# 🫀 LifeBridge — Real-Time Organ Tracking & Allocation Platform
+# LifeBridge — Real-Time Organ Tracking & Allocation Platform
 
 **A Secure, Intelligent, and Compliant System for Organ Allocation and Transport Logistics**
 
@@ -16,25 +16,25 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 
 ## 🧠 Core Capabilities
 
-### ⚙️ Real-Time Organ Lifecycle Management
+### Real-Time Organ Lifecycle Management
 - End-to-end visibility from donor to recipient  
 - Automated organ matching using HLA and compatibility scoring  
 - Live tracking of transport status and environmental conditions  
 - Intelligent viability alerts and allocation prioritization  
 
-### 🔒 Medical-Grade Data Security
+### Medical-Grade Data Security
 - AES-256-GCM encryption for all Protected Health Information (PHI)  
 - Role-based access control for hospitals, surgeons, and coordinators  
 - Full compliance with HIPAA, GDPR, and ISO/IEC 27001 standards  
 - Immutable audit trails and session-level event logging  
 
-### 📡 Smart Logistics & Telemetry
+### Smart Logistics & Telemetry
 - GPS-tracked organ transport with real-time synchronization  
 - Environmental data capture (temperature, weather impact, route deviation)  
 - Support for ground, drone, and airlift transportation modes  
 - Automated notifications and exception handling  
 
-### 🧾 Compliance & Accountability
+### Compliance & Accountability
 - Field-level encryption with authenticated data access  
 - Multi-layer audit logging for every system event  
 - Chain-of-custody verification through digital signatures  
@@ -61,11 +61,11 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 
 ```mermaid
 flowchart TD
-    A[Frontend: React + Vite] --> B[Backend API: Node.js + Express]
-    B --> C[(Database: PostgreSQL + Drizzle ORM)]
-    B --> D[Encryption Layer: AES-256-GCM]
-    B --> E[Telemetry Engine: GPS + Real-Time Status]
-    B --> F[Audit Layer: Immutable Logs]
+    A["Frontend: React and Vite"] --> B["Backend API: Node.js and Express"]
+    B --> C["Database: PostgreSQL with Drizzle ORM"]
+    B --> D["Encryption Layer: AES-256-GCM"]
+    B --> E["Telemetry Engine: GPS and Real-Time Status"]
+    B --> F["Audit Layer: Immutable Logs"]
 🗄️ Data Model Overview
 LifeBridge’s schema is fully normalized (3NF) and optimized for real-time queries, reliability, and regulatory compliance.
 
@@ -120,15 +120,15 @@ SOC 2 Type II	✅ Logging, integrity, confidentiality, availability
 LifeBridge is designed to unify healthcare logistics, ethical compliance, and real-time intelligence into one cohesive ecosystem.
 
 Future Enhancements:
-🔄 Live WebSocket telemetry for active organ tracking
+Live WebSocket telemetry for active organ tracking
 
-🧬 AI-assisted organ match scoring and outcome prediction
+AI-assisted organ match scoring and outcome prediction
 
-🌍 Global multi-region deployment with redundancy
+Global multi-region deployment with redundancy
 
-📊 Predictive analytics and transplant performance dashboards
+Predictive analytics and transplant performance dashboards
 
-🔒 Vault-based encryption key lifecycle management
+Vault-based encryption key lifecycle management
 
 🧑‍💼 Contact & Enterprise Access
 LifeBridge is a proprietary system.

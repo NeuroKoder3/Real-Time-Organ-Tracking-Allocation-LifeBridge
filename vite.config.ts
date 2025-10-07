@@ -7,19 +7,21 @@ const require = createRequire(import.meta.url);
 const crypto = require("crypto");
 
 export default defineConfig({
-  // ✅ Root stays in /client for Vite
+  // ✅ Vite project root
   root: resolve(__dirname, "client"),
 
+  // ✅ React plugin
   plugins: [react()],
 
-  // ✅ Hardcode env at build time
+  // ✅ Define build-time environment variables
   define: {
     "import.meta.env.VITE_API_URL": JSON.stringify(
       process.env.VITE_API_URL || "https://api.lifebridge.online"
     ),
-    crypto, // allow crypto polyfill during build
+    crypto, // 🧩 Inject crypto polyfill for frontend builds
   },
 
+  // ✅ Alias resolution matching tsconfig + folder structure
   resolve: {
     alias: {
       "@": resolve(__dirname, "client", "src"),
@@ -28,9 +30,9 @@ export default defineConfig({
     },
   },
 
+  // ✅ Build output config (dist folder relative to /client)
   build: {
-    // ✅ Output inside client/dist (what server expects)
-    outDir: "dist", // relative to /client root → client/dist
+    outDir: "dist",
     emptyOutDir: true,
     rollupOptions: {
       output: {
@@ -44,23 +46,25 @@ export default defineConfig({
     },
   },
 
+  // ✅ Optimization hints
   optimizeDeps: {
     include: ["react", "react-dom", "react/jsx-runtime"],
   },
 
+  // ✅ Dev server config for full-stack proxying
   server: {
     port: 5173,
     strictPort: false,
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "http://localhost:5000", // 🔁 Backend server for demo login
         changeOrigin: true,
         secure: false,
       },
     },
     fs: {
       strict: true,
-      deny: ["**/.*"],
+      deny: ["**/.*"], // Prevent .env/.git exposure
     },
   },
 });

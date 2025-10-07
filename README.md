@@ -1,147 +1,149 @@
-🩺 LifeBridge – Real-Time Organ Tracking & Allocation
+# 🫀 LifeBridge — Real-Time Organ Tracking & Allocation Platform
 
-LifeBridge is a full-stack, real-time application for tracking, allocating, and managing organ transplants across distributed healthcare networks. It leverages modern technologies like Vite, React, Express, TailwindCSS, and PostgreSQL with a focus on scalability, real-time communication, and security.
+**A Secure, Intelligent, and Compliant System for Organ Allocation and Transport Logistics**
 
-🔗 Live Site
+> *Developed to bridge lives through precision, security, and innovation.*
 
-🌐 Visit Deployed App (via Netlify)
+---
 
-https://lifebridge-opotracking.netlify.app/
+## 🚀 Overview
 
-📦 Tech Stack
-Frontend:
+**LifeBridge** is an enterprise-grade, end-to-end platform for **real-time organ tracking**, **allocation**, and **transport coordination** between donor hospitals, transplant centers, and logistics teams.
 
-Vite
- – Blazing fast dev & build tool
+The system leverages **strong encryption**, **real-time telemetry**, and **compliance-grade auditing** to ensure that every organ reaches the right patient — safely, quickly, and transparently.
 
-React
- – Component-based UI
+---
 
-TailwindCSS
- – Utility-first CSS
+## 🧠 Core Capabilities
 
-Radix UI
- – Accessible component primitives
+### ⚙️ Real-Time Organ Lifecycle Management
+- End-to-end visibility from donor to recipient  
+- Automated organ matching using HLA and compatibility scoring  
+- Live tracking of transport status and environmental conditions  
+- Intelligent viability alerts and allocation prioritization  
 
-React Router
- – Client-side routing
+### 🔒 Medical-Grade Data Security
+- AES-256-GCM encryption for all Protected Health Information (PHI)  
+- Role-based access control for hospitals, surgeons, and coordinators  
+- Full compliance with HIPAA, GDPR, and ISO/IEC 27001 standards  
+- Immutable audit trails and session-level event logging  
 
-Zod
- – Schema validation
+### 📡 Smart Logistics & Telemetry
+- GPS-tracked organ transport with real-time synchronization  
+- Environmental data capture (temperature, weather impact, route deviation)  
+- Support for ground, drone, and airlift transportation modes  
+- Automated notifications and exception handling  
 
-Backend:
+### 🧾 Compliance & Accountability
+- Field-level encryption with authenticated data access  
+- Multi-layer audit logging for every system event  
+- Chain-of-custody verification through digital signatures  
+- PHI access flags for compliance auditing  
 
-Express.js
- – Fast Node.js server
+---
 
-PostgreSQL
- – Relational DB
+## 🧩 Technology Foundation
 
-Drizzle ORM
- – Type-safe SQL ORM
+| Layer | Technology |
+|-------|-------------|
+| **Frontend** | React, Vite, TailwindCSS, Radix UI |
+| **Backend** | Node.js, Express, TypeScript |
+| **Database** | PostgreSQL (Drizzle ORM) |
+| **Encryption** | AES-256-GCM field-level protection |
+| **Auth & Access Control** | Passport.js, JWT, OpenID Connect |
+| **Infrastructure** | Docker, Docker Compose, Netlify Edge |
+| **Testing** | Jest + Supertest |
+| **Compliance** | HIPAA / GDPR / ISO 27001 aligned |
 
-Passport.js
- – Authentication
+---
 
-WebSockets (ws)
- – Real-time communication
+## 🧱 System Architecture
 
-Tooling:
+```mermaid
+flowchart TD
+    A[Frontend — React + Vite] --> B[Backend API — Node.js + Express]
+    B --> C[(Database — PostgreSQL + Drizzle ORM)]
+    B --> D[Encryption Layer — AES-256-GCM]
+    B --> E[Telemetry Engine — GPS + Real-Time Status]
+    B --> F[Audit Layer — Immutable Logs]
+🗄️ Data Model Overview
+LifeBridge’s schema is fully normalized (3NF) and optimized for real-time queries, reliability, and regulatory compliance.
 
-PNPM
- – Fast, disk-efficient package manager
+Entity	Description
+Users	Authorized personnel (admins, coordinators, surgeons, transporters)
+Donors	PHI-protected donor records and medical history
+Recipients	Transplant candidates with MELD/CPC scoring
+Organs	Individual organs with preservation and viability data
+Allocations	Organ-to-recipient match data and acceptance workflow
+Transports	GPS-tracked logistics and delivery chain
+Custody Logs	Chain-of-custody documentation and signatures
+Audit Logs	Regulatory trace of all user and system actions
 
-TypeScript
- – Type safety
+🔐 Security Model
+Layer	Security Measure
+Data Encryption	AES-256-GCM (field-level)
+Authentication	JWT + Session Isolation
+Authorization	Role-based (admin, coordinator, surgeon, transport)
+Transport Layer	HTTPS, CORS, CSRF, Helmet hardening
+Database Access	Encrypted at rest, secure key rotation
+Monitoring	Audit logs, PHI access flags, session metadata
 
-Jest
- – Unit testing
+🧮 Infrastructure Overview
+Component	Description
+API Service	Containerized Node.js backend
+Database Service	PostgreSQL with Drizzle ORM
+Encryption Layer	AES-256-GCM with IV rotation
+Orchestration	Docker Compose multi-service
+Frontend Delivery	Netlify Edge CDN (or on-prem)
+Telemetry Pipeline	Event-stream-ready architecture
+Observability	Prometheus/Grafana ready (planned)
 
-Docker
- – Containerization
+⚙️ Operational Highlights
+Scalable Microservice Architecture — deployable via Docker Swarm, AWS ECS, or Kubernetes
 
-Netlify
- – Frontend deployment
+High Availability — stateless API + persistent database layer
 
-🧠 Key Features
+Disaster Recovery — volume persistence and daily backups
 
-⚡ Real-time organ tracking and availability updates
+Low Latency — optimized for sub-200ms response time
 
-🔐 Secure login and session management
+Monitoring Ready — compatible with OpenTelemetry, Prometheus, and ELK stack
 
-📈 Role-based dashboards for medical professionals
+🩺 Compliance Readiness
+Standard	Coverage
+HIPAA	✅ AES encryption, audit logging, PHI traceability
+GDPR	✅ Data minimization, access control, deletion readiness
+ISO 27001	✅ Risk, event, and access management
+SOC 2 Type II	✅ Logging, integrity, confidentiality, availability
 
-📦 Offline-first support (via caching and reconnect strategies)
+🧭 Strategic Vision
+LifeBridge is designed to unify healthcare logistics, ethical compliance, and real-time intelligence into one cohesive ecosystem.
 
-🌐 API proxying via Netlify for seamless frontend/backend integration
+Future Enhancements:
+🔄 Live WebSocket telemetry for active organ tracking
 
-📁 Project Structure
-.
-├── client/             # Frontend source code (React + Vite)
-├── server/             # Backend code (Express, routes, auth, logic)
-├── shared/             # Shared TypeScript types between client/server
-├── attached_assets/    # Static assets like logos, images
-├── dist/               # Compiled build output
-├── netlify.toml        # Netlify deployment config
-├── tailwind.config.ts  # Tailwind configuration
-├── vite.config.ts      # Vite config for frontend bundling
-└── package.json        # Monorepo root dependencies & scripts
+🧬 AI-assisted organ match scoring and outcome prediction
 
-🚀 Getting Started (Local Dev)
-1. Clone the Repo
-git clone https://github.com/NeuroKoder3/Real-Time-Organ-Tracking-Allocation-LifeBridge.git
-cd Real-Time-Organ-Tracking-Allocation-LifeBridge
+🌍 Global multi-region deployment with redundancy
 
-2. Install Dependencies
-pnpm install
+📊 Predictive analytics and transplant performance dashboards
 
-3. Setup Environment Variables
+🔒 Vault-based encryption key lifecycle management
 
-Create a .env file (or set environment vars in Netlify):
+🧑‍💼 Contact & Enterprise Access
+LifeBridge is a proprietary system.
+Source code, build configurations, and internal architecture are not publicly distributed.
 
-VITE_API_URL=http://localhost:5000
+For partnership, integration, or enterprise evaluation inquiries, please contact:
 
-4. Start Dev Servers
-pnpm run dev
+📧 Nicole Gildehaus — System Architect
+📨 lilnicole0383@gmail.com
 
+🛡️ Legal Notice
+© 2025 LifeBridge.
+All rights reserved.
+Unauthorized access, distribution, or modification of this software is strictly prohibited.
 
-React/Vite runs at: http://localhost:5173
-
-Express API runs at: http://localhost:5000
-
-🧪 Running Tests
-pnpm run test
-
-
-Use test:watch or test:coverage for advanced test runs.
-
-🐳 Docker Support
-
-To build and run the app in containers:
-
-pnpm run docker:build
-pnpm run docker:up
-
-
-Stop and clean:
-
-pnpm run docker:down
-
-📤 Deployment Notes
-
-Frontend: deployed via Netlify using vite.config.ts and netlify.toml
-
-Backend: assumed to be deployed separately (e.g. Railway, Fly.io, VPS)
-
-Make sure to update VITE_API_URL in Netlify’s Environment Variables to point to your live backend.
-
-🙏 Acknowledgments
-
-Special thanks to open-source contributors of TailwindCSS, Drizzle ORM, Radix UI, and more.
-
-
-
-## 🛡 License
-
-This repository and its contents are © 2025 Nicole Gildehaus-LifeBridge.  
-All rights reserved. **No one may use, copy, modify, or distribute any part of this code without explicit written permission.**
+💡 Motto
+“Precision. Security. Humanity.
+Every heartbeat deserves a bridge.”

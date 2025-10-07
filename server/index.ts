@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
-import fetch from "node-fetch"; // ✅ NEW: used for auto-seed
+import fetch from "node-fetch"; // ✅ used for auto-seed
 
 if (fs.existsSync(".env")) {
   dotenv.config();
@@ -46,17 +46,17 @@ import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
 
-// ✅ ESM-safe __dirname / __filename
+// ESM-safe __dirname / __filename
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ---------------------------------------------------------
 // ✅ Create Express App
 // ---------------------------------------------------------
-const app: Express = express(); // ✅ Type annotation added (fixes TS2742)
+const app: Express = express();
 
 // ---------------------------------------------------------
-// ✅ Allowed Origins — cleaned & corrected
+// ✅ Allowed Origins
 // ---------------------------------------------------------
 const allowedOrigins = [
   "https://lifebridge-opotracking.netlify.app",
@@ -68,7 +68,7 @@ const allowedOrigins = [
 ];
 
 // ---------------------------------------------------------
-// ✅ CORS Middleware — universal & strict-compliant
+// ✅ CORS Middleware
 // ---------------------------------------------------------
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -90,7 +90,7 @@ app.use((req, res, next) => {
 });
 
 // ---------------------------------------------------------
-// ✅ Security Middleware (Helmet + CSP)
+// ✅ Security Middleware
 // ---------------------------------------------------------
 app.use(
   helmet({
@@ -98,7 +98,6 @@ app.use(
     crossOriginEmbedderPolicy: false,
   })
 );
-
 app.use(cookieParser());
 
 // ---------------------------------------------------------
@@ -133,7 +132,7 @@ if (process.env.NODE_ENV !== "test") {
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
-// ✅ Logging
+// Logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -148,11 +147,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ---------------------------------------------------------
 // ✅ Health Checks
 // ---------------------------------------------------------
-app.get("/api/health", (_req: Request, res: Response) => {
+app.get("/api/health", (_req, res) => {
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
 });
-
-app.get("/healthz", (_req: Request, res: Response) => res.send("ok"));
+app.get("/healthz", (_req, res) => res.send("ok"));
 
 // ---------------------------------------------------------
 // ✅ Register API Routes
@@ -176,19 +174,19 @@ app.use(errorHandler);
       const server = http.createServer(app);
       await setupVite(app, server);
 
-      // 🌱 Seed the demo user automatically — now type-safe ✅
-      try {
-        const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
-          method: "POST",
-        });
-        const data = (await res.json()) as { message: string }; // ✅ Type assertion fix
-        log(`[Server] 🌱 Demo user seeded: ${data.message}`);
-      } catch (err) {
-        console.error("[Server] ❌ Failed to seed demo user", err);
-      }
-
-      server.listen(port, "0.0.0.0", () => {
+      server.listen(port, "0.0.0.0", async () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
+
+        // 🌱 Seed the demo user AFTER server is listening
+        try {
+          const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
+            method: "POST",
+          });
+          const data = (await res.json()) as { message: string };
+          log(`[Server] 🌱 Demo user seeded: ${data.message}`);
+        } catch (err) {
+          console.error("[Server] ❌ Failed to seed demo user", err);
+        }
       });
     } else {
       serveStatic(app);

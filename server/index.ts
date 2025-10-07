@@ -94,7 +94,7 @@ app.use((req, res, next) => {
 // ---------------------------------------------------------
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Disabled for cross-domain API compatibility
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -107,7 +107,6 @@ app.use(cookieParser());
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
 
-  // ✅ Properly typed CSRF middleware
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -116,7 +115,6 @@ if (process.env.NODE_ENV !== "test") {
     },
   }) as unknown as RequestHandler;
 
-  // ✅ Correctly scoped CSRF exclusion
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/auth/_seed-demo")) {
       return next();
@@ -183,7 +181,7 @@ app.use(errorHandler);
         const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
           method: "POST",
         });
-        const data: { message: string } = await res.json(); // ✅ Fix: Typed JSON
+        const data = (await res.json()) as { message: string }; // ✅ Type assertion fix
         log(`[Server] 🌱 Demo user seeded: ${data.message}`);
       } catch (err) {
         console.error("[Server] ❌ Failed to seed demo user", err);

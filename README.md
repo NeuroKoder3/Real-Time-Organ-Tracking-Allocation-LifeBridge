@@ -61,11 +61,11 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 
 ```mermaid
 flowchart TD
-    A[Frontend — React + Vite] --> B[Backend API — Node.js + Express]
-    B --> C[(Database — PostgreSQL + Drizzle ORM)]
-    B --> D[Encryption Layer — AES-256-GCM]
-    B --> E[Telemetry Engine — GPS + Real-Time Status]
-    B --> F[Audit Layer — Immutable Logs]
+    A[Frontend: React + Vite] --> B[Backend API: Node.js + Express]
+    B --> C[(Database: PostgreSQL + Drizzle ORM)]
+    B --> D[Encryption Layer: AES-256-GCM]
+    B --> E[Telemetry Engine: GPS + Real-Time Status]
+    B --> F[Audit Layer: Immutable Logs]
 🗄️ Data Model Overview
 LifeBridge’s schema is fully normalized (3NF) and optimized for real-time queries, reliability, and regulatory compliance.
 

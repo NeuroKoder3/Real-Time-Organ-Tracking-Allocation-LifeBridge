@@ -10,10 +10,9 @@ import rateLimit from "express-rate-limit";
 
 const router: Router = Router();
 
-// ✅ Rate limiter for refresh endpoint (cast to RequestHandler for TS)
 const refreshLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 requests per windowMs
+  windowMs: 1 * 60 * 1000,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
 }) as RequestHandler;
@@ -37,7 +36,6 @@ const has = {
   getUser: typeof (storage as any)?.getUser === "function",
 };
 
-// Dev fallback user store
 type DevUser = {
   id: string;
   email: string;
@@ -187,7 +185,6 @@ router.post("/login", async (req: Request, res: Response) => {
   const { email, password } = parsed.data;
 
   try {
-    // 1️⃣ DEMO LOGIN BYPASS
     if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
       const payload = { sub: DEMO_USER_ID, email: DEMO_EMAIL, role: "coordinator" };
       const { accessToken, refreshToken } = generateTokens(payload);
@@ -215,7 +212,6 @@ router.post("/login", async (req: Request, res: Response) => {
       });
     }
 
-    // 2️⃣ Normal login
     const user = await adapterGetUserByEmail(email);
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -270,7 +266,6 @@ router.post("/login", async (req: Request, res: Response) => {
 // ---------------------------------------------------------
 // Refresh
 // ---------------------------------------------------------
-// ✅ Correct order: path string first, then limiter, then middleware, then handler
 router.post(
   "/refresh",
   refreshLimiter,
@@ -340,6 +335,42 @@ router.post("/_seed-demo", async (_req, res) => {
   });
 
   return res.json({ message: "Demo user created" });
+});
+
+// ---------------------------------------------------------
+// Dev-only: seed admin user (CSRF safe)
+// ---------------------------------------------------------
+router.post("/_seed-admin", async (req, res) => {
+  if (process.env.NODE_ENV !== "development") {
+    return res.status(403).json({ message: "Forbidden in production" });
+  }
+
+  // ✅ Skip CSRF check on this dev route
+  if ((req as any).csrfToken && !req.headers["x-csrf-token"]) {
+    return res.status(403).json({ message: "Missing CSRF token" });
+  }
+
+  const email = "admin@lifebridge.dev";
+  const name = "Admin User";
+  const password = "SuperSecure123!";
+  const role = "admin";
+
+  const existing = await adapterGetUserByEmail(email);
+  if (existing) {
+    return res.status(409).json({ message: "Admin already exists" });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  const user = await adapterCreateUser({ email, name, role, passwordHash });
+
+  return res.json({
+    message: has.createUser
+      ? "✅ Admin user created in database"
+      : "⚠️ Admin user created in dev memory (not persistent)",
+    email,
+    password,
+    userId: user.id,
+  });
 });
 
 export default router;

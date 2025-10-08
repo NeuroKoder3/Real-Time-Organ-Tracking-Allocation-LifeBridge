@@ -101,7 +101,7 @@ app.use(
 app.use(cookieParser());
 
 // ---------------------------------------------------------
-// ✅ CSRF protection (cookie-based)
+// ✅ CSRF protection (cookie-based) with dev route exemptions
 // ---------------------------------------------------------
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
@@ -115,12 +115,25 @@ if (process.env.NODE_ENV !== "test") {
   }) as unknown as RequestHandler;
 
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith("/api/auth/_seed-demo")) {
+    // ✅ Skip CSRF for seed/debug routes
+    const csrfExempt = [
+      "/api/auth/_seed-demo",
+      "/api/auth/_seed-admin",
+      "/api/_seed-demo",
+      "/api/_seed-admin",
+      "/_seed-demo",
+      "/_seed-admin",
+      "/_debug"
+    ];
+
+    if (csrfExempt.includes(req.path)) {
       return next();
     }
+
     return csrfMiddleware(req, res, next);
   });
 
+  // Route to fetch CSRF token
   app.get("/api/csrf-token", (req: Request, res: Response) => {
     res.json({ csrfToken: (req as any).csrfToken?.() });
   });
@@ -184,8 +197,15 @@ app.use(errorHandler);
           });
           const data = (await res.json()) as { message: string };
           log(`[Server] 🌱 Demo user seeded: ${data.message}`);
+
+          // 🌱 Auto-seed admin user too (optional)
+          const resAdmin = await fetch(`http://localhost:${port}/api/auth/_seed-admin`, {
+            method: "POST",
+          });
+          const adminData = (await resAdmin.json()) as { message: string };
+          log(`[Server] 👑 Admin user seeded: ${adminData.message}`);
         } catch (err) {
-          console.error("[Server] ❌ Failed to seed demo user", err);
+          console.error("[Server] ❌ Failed to seed users", err);
         }
       });
     } else {

@@ -11,7 +11,7 @@
     "dev:server": "cross-env NODE_ENV=development tsx watch --tsconfig tsconfig.server.json server/index.ts",
     "dev:client": "vite --config vite.config.ts",
     "dev": "concurrently \"pnpm run dev:server\" \"pnpm run dev:client\"",
-    "build:client": "vite build --config file://./vite.config.ts",
+    "build:client": "vite --config vite.config.ts",
     "build:server": "tsc -p tsconfig.server.json && pnpm run postbuild:server",
     "postbuild:server": "cpx \"server/config/**/*.{js,json,ts}\" dist/server/config",
     "build": "pnpm run build:client && pnpm run build:server",

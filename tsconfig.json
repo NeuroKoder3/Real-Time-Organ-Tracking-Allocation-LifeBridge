@@ -3,42 +3,36 @@
     "client/src/**/*",
     "shared/**/*",
     "vite.config.ts",
-    "server/**/*" // ✅ INCLUDE server for shared types (if needed)
+    "server/**/*"
   ],
   "exclude": [
     "node_modules",
     "build",
     "dist",
-    "tsconfig.server.json" // ✅ Still exclude server build config
+    "tsconfig.server.json"
   ],
   "compilerOptions": {
-    // ✅ No output - Vite handles transpilation
     "noEmit": true,
-
-    // ✅ Use modern modules
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "target": "ES2022",
 
-    // ✅ React and DOM support
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "react-jsx",
     "jsxImportSource": "react",
 
-    // ✅ Interop ergonomics
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
 
-    // ✅ Aliases
     "baseUrl": ".",
     "paths": {
       "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@assets/*": ["./attached_assets/*"]
     },
 
-    // ✅ Types
     "types": [
       "vite/client",
       "node"

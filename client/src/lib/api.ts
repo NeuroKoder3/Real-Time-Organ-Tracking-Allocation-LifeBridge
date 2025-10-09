@@ -4,7 +4,7 @@
  */
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000"; 
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 // ✅ Uses environment variable first, then falls back to localhost
 
 // ✅ Log only in development
@@ -20,7 +20,8 @@ async function safeJsonParse<T>(res: Response): Promise<T | null> {
     const text = await res.text();
     if (!text) return null;
     return JSON.parse(text) as T;
-  } catch {
+  } catch (err) {
+    console.warn("⚠️ Failed to parse JSON:", err);
     return null;
   }
 }
@@ -32,9 +33,15 @@ export async function api<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const userRaw = localStorage.getItem("lifebridge_user");
-  const user = userRaw ? JSON.parse(userRaw) : {};
-  const token = user?.token;
+  let token: string | undefined;
+
+  try {
+    const userRaw = localStorage.getItem("lifebridge_user");
+    const user = userRaw ? JSON.parse(userRaw) : null;
+    token = user?.token;
+  } catch (err) {
+    console.warn("⚠️ Failed to read user token from localStorage:", err);
+  }
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -42,11 +49,10 @@ export async function api<T = unknown>(
     ...(options.headers || {}),
   };
 
-  // ✅ Always include credentials for cookie/session authentication
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include",
+    credentials: "include", // ✅ Ensures cookies (e.g. CSRF) are sent
   };
 
   try {
@@ -60,15 +66,11 @@ export async function api<T = unknown>(
       throw new Error("Unauthorized: please sign in again.");
     }
 
-    if (response.status === 204) {
-      // No content
-      return {} as T;
-    }
-
-    if (response.status === 304) {
-      // Not Modified (e.g., caching scenario)
-      if (import.meta.env.DEV)
-        console.info(`ℹ️ [API] 304 Not Modified: ${path}`);
+    if (response.status === 204 || response.status === 304) {
+      // No content or not modified
+      if (import.meta.env.DEV) {
+        console.info(`ℹ️ [API] ${response.status} No content or not modified: ${path}`);
+      }
       return {} as T;
     }
 

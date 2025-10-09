@@ -4,16 +4,15 @@
  */
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
-// ✅ Uses environment variable first, then falls back to localhost
+  import.meta.env.VITE_API_URL?.trim() || "http://localhost:5000";
+// ✅ Uses env var if defined, falls back to localhost
 
-// ✅ Log only in development
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);
 }
 
 /**
- * Helper to safely parse JSON (prevents crashes on malformed responses)
+ * Safely parses JSON to avoid crashes on empty/malformed responses
  */
 async function safeJsonParse<T>(res: Response): Promise<T | null> {
   try {
@@ -27,7 +26,7 @@ async function safeJsonParse<T>(res: Response): Promise<T | null> {
 }
 
 /**
- * API fetch wrapper
+ * API request wrapper
  */
 export async function api<T = unknown>(
   path: string,
@@ -52,41 +51,46 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include", // ✅ Ensures cookies (e.g. CSRF) are sent
+    credentials: "include", // Required for cookies/sessions
   };
 
+  let response: Response;
+
   try {
-    const response = await fetch(`${BASE_URL}${path}`, fetchOptions);
-
-    // 🔐 Handle expired session or unauthorized token
-    if (response.status === 401) {
-      console.warn("[API] Session expired — redirecting to login.");
-      localStorage.removeItem("lifebridge_user");
-      window.location.href = "/";
-      throw new Error("Unauthorized: please sign in again.");
-    }
-
-    if (response.status === 204 || response.status === 304) {
-      // No content or not modified
-      if (import.meta.env.DEV) {
-        console.info(`ℹ️ [API] ${response.status} No content or not modified: ${path}`);
-      }
-      return {} as T;
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      const message = errorText || `HTTP ${response.status}`;
-      console.error(`❌ [API] Request failed (${response.status}): ${message}`);
-      throw new Error(message);
-    }
-
-    const data = await safeJsonParse<T>(response);
-    return (data ?? {}) as T;
-  } catch (error) {
-    console.error("🚨 [API] Network or runtime error:", error);
-    throw error;
+    response = await fetch(`${BASE_URL}${path}`, fetchOptions);
+  } catch (err) {
+    console.error("🚨 [API] Network error or backend not reachable:", err);
+    throw new Error("Network error: Unable to reach backend server.");
   }
+
+  // 🔐 Handle unauthorized session
+  if (response.status === 401) {
+    console.warn("[API] Unauthorized — redirecting to login.");
+    localStorage.removeItem("lifebridge_user");
+    window.location.href = "/";
+    throw new Error("Unauthorized: please sign in again.");
+  }
+
+  if (response.status === 204 || response.status === 304) {
+    if (import.meta.env.DEV) {
+      console.info(`ℹ️ [API] ${response.status} No content / Not modified: ${path}`);
+    }
+    return {} as T;
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const message = errorText || `HTTP ${response.status}`;
+    console.error(`❌ [API] Request failed (${response.status}): ${message}`);
+    throw new Error(message);
+  }
+
+  const data = await safeJsonParse<T>(response);
+  if (data === null) {
+    throw new Error("Invalid JSON response from API.");
+  }
+
+  return data;
 }
 
 export default api;

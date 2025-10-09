@@ -10,12 +10,13 @@ import {
   CheckCircle,
   Plane,
   MessageSquare,
+  LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
-// ✅ Import your logo
+// ✅ Import logo with correct typing (e.g., for Vite)
 import lifebridgeLogo from "@/assets/lifebridge-logo.jpg";
 
 // -----------------------------
@@ -24,7 +25,7 @@ import lifebridgeLogo from "@/assets/lifebridge-logo.jpg";
 const API_URL = import.meta.env.VITE_API_URL ?? window.location.origin;
 
 type Feature = {
-  icon: React.ElementType;
+  icon: LucideIcon; // ✅ Strongly typed icon component
   title: string;
   description: string;
 };
@@ -81,9 +82,6 @@ export default function Landing() {
     "End-to-end transparency for all teams",
   ];
 
-  // -----------------------------
-  // Handle Login
-  // -----------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -107,9 +105,6 @@ export default function Landing() {
     }
   };
 
-  // -----------------------------
-  // Demo Login
-  // -----------------------------
   const handleDemoLogin = async () => {
     setEmail("admin@lifebridge.dev");
     setPassword("SuperSecure123!");
@@ -134,15 +129,10 @@ export default function Landing() {
     }
   };
 
-  // -----------------------------
-  // Render Page
-  // -----------------------------
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 flex flex-col">
-      {/* ✅ Header Updated */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          {/* ✅ Clickable Logo */}
           <button onClick={() => navigate("/")} className="flex items-center gap-2">
             <img
               src={lifebridgeLogo}
@@ -150,8 +140,6 @@ export default function Landing() {
               className="h-10 w-auto object-contain"
             />
           </button>
-
-          {/* ❌ Removed API URL */}
         </div>
       </header>
 
@@ -224,7 +212,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Core Platform Features</h2>
@@ -234,21 +222,24 @@ export default function Landing() {
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover-elevate">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <feature.icon className="h-5 w-5 text-primary" />
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Card key={index} className="hover-elevate">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardTitle className="text-lg">{feature.title}</CardTitle>
                   </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 

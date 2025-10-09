@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api"; // ✅ Make sure this points to your actual api.ts file
+import api from "@/lib/api"; // ✅ Ensure this correctly resolves to api.ts
 
 interface User {
   id: string;
@@ -11,6 +11,10 @@ interface User {
   token?: string;
 }
 
+interface CsrfResponse {
+  csrfToken: string;
+}
+
 const STORAGE_KEY = "lifebridge_user";
 
 export function useAuth() {
@@ -19,9 +23,10 @@ export function useAuth() {
   // ✅ Fetch current user session
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
-    queryFn: async () => {
+    queryFn: async (): Promise<User | null> => {
       try {
-        return await api<User | null>("/api/auth/user");
+        const response = await api<User | null>("/api/auth/user");
+        return response;
       } catch (err) {
         console.warn("Auth fetch failed:", err);
         return null;
@@ -32,22 +37,30 @@ export function useAuth() {
 
   // ✅ Secure login with CSRF protection
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string): Promise<User> => {
       try {
         // Get CSRF token first
-        const { csrfToken } = await api<{ csrfToken: string }>("/api/csrf-token");
+        const csrfRes = await api<CsrfResponse>("/api/csrf-token");
+        const csrfToken = csrfRes?.csrfToken;
+
+        if (!csrfToken) {
+          throw new Error("CSRF token missing.");
+        }
 
         // Login
-        const data: User = await api<User>("/api/auth/login", {
+        const userData = await api<User>("/api/auth/login", {
           method: "POST",
-          headers: { "X-CSRF-Token": csrfToken },
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+          },
           body: JSON.stringify({ email, password }),
         });
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        queryClient.setQueryData(["/api/auth/user"], data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+        queryClient.setQueryData(["/api/auth/user"], userData);
 
-        return data;
+        return userData;
       } catch (err) {
         console.error("Login error:", err);
         throw err;
@@ -59,12 +72,18 @@ export function useAuth() {
   // ✅ Logout
   const logout = useCallback(async () => {
     try {
-      const { csrfToken } = await api<{ csrfToken: string }>("/api/csrf-token");
+      const csrfRes = await api<CsrfResponse>("/api/csrf-token");
+      const csrfToken = csrfRes?.csrfToken;
 
-      await api("/api/auth/logout", {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-      });
+      if (csrfToken) {
+        await api("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+          },
+        });
+      }
     } catch (err) {
       console.warn("Logout error:", err);
     }
@@ -74,15 +93,16 @@ export function useAuth() {
     window.location.href = "/";
   }, [queryClient]);
 
-  // ✅ Fallback to localStorage if needed
+  // ✅ Restore from localStorage if user is undefined
   useEffect(() => {
     if (!user) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          const parsed = JSON.parse(stored);
+          const parsed: User = JSON.parse(stored);
           queryClient.setQueryData(["/api/auth/user"], parsed);
-        } catch {
+        } catch (err) {
+          console.warn("Failed to parse local user:", err);
           localStorage.removeItem(STORAGE_KEY);
         }
       }

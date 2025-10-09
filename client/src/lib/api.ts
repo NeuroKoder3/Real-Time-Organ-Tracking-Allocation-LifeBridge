@@ -4,9 +4,8 @@
  */
 
 const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:5000"
-    : ""; // use relative path in production for Netlify proxy
+  import.meta.env.VITE_API_URL || "http://localhost:5000"; 
+// ✅ Uses environment variable first, then falls back to localhost
 
 // ✅ Log only in development
 if (import.meta.env.DEV) {

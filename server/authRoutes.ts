@@ -22,8 +22,8 @@ const isProd = process.env.NODE_ENV === "production";
 // ---------------------------------------------------------
 // Demo credentials
 // ---------------------------------------------------------
-const DEMO_EMAIL = "demo@lifebridge.online";
-const DEMO_PASSWORD = "Demo1234";
+const DEMO_EMAIL = "admin@lifebridge.dev";
+const DEMO_PASSWORD = "SuperSecure123!";
 const DEMO_USER_ID = "demo-user-id";
 
 // ---------------------------------------------------------

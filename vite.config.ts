@@ -4,7 +4,9 @@ import { resolve } from "path";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const crypto = require("crypto");
+
+// ✅ No need to import or inject `crypto` — browsers already have it
+// const crypto = require("crypto");
 
 export default defineConfig({
   // ✅ Vite project root
@@ -18,7 +20,6 @@ export default defineConfig({
     "import.meta.env.VITE_API_URL": JSON.stringify(
       process.env.VITE_API_URL || "https://api.lifebridge.online"
     ),
-    crypto, // 🧩 Inject crypto polyfill for frontend builds
   },
 
   // ✅ Alias resolution matching tsconfig + folder structure

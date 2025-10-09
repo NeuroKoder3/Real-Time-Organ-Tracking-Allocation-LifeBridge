@@ -111,12 +111,12 @@ export default function Landing() {
   // Demo Login
   // -----------------------------
   const handleDemoLogin = async () => {
-    setEmail("demo@lifebridge.com");
-    setPassword("password123");
+    setEmail("admin@lifebridge.dev");
+    setPassword("SuperSecure123!");
     setError("");
     setLoading(true);
     try {
-      await login("demo@lifebridge.com", "password123");
+      await login("admin@lifebridge.dev", "SuperSecure123!");
       toast({
         title: "Demo Login Successful",
         description: "Welcome to the LifeBridge demo dashboard.",

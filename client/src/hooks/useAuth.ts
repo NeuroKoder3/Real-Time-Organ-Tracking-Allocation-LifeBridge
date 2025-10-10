@@ -21,12 +21,12 @@ export function useAuth() {
   const queryClient = useQueryClient();
 
   // ✅ Fetch current user session
-  const { data: user, isLoading } = useQuery<User | null>({
+  const { data: user, isLoading } = useQuery<User | null, Error, User | null>({
     queryKey: ["/api/auth/user"],
-    queryFn: async (): Promise<User | null> => {
+    queryFn: async () => {
       try {
         const response = await api<User | null>("/api/auth/user");
-        return response;
+        return response ?? null;
       } catch (err) {
         console.warn("Auth fetch failed:", err);
         return null;
@@ -39,15 +39,15 @@ export function useAuth() {
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
       try {
-        // Get CSRF token first
+        // Step 1: Get CSRF token
         const csrfRes = await api<CsrfResponse>("/api/csrf-token");
         const csrfToken = csrfRes?.csrfToken;
 
-        if (!csrfToken) {
-          throw new Error("CSRF token missing.");
+        if (typeof csrfToken !== "string" || !csrfToken.trim()) {
+          throw new Error("CSRF token missing or invalid.");
         }
 
-        // Login
+        // Step 2: Attempt login
         const userData = await api<User>("/api/auth/login", {
           method: "POST",
           headers: {
@@ -57,6 +57,11 @@ export function useAuth() {
           body: JSON.stringify({ email, password }),
         });
 
+        if (!userData || !userData.id) {
+          throw new Error("Invalid user data returned from login.");
+        }
+
+        // Step 3: Cache user in localStorage and React Query
         localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
         queryClient.setQueryData(["/api/auth/user"], userData);
 
@@ -75,7 +80,7 @@ export function useAuth() {
       const csrfRes = await api<CsrfResponse>("/api/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
 
-      if (csrfToken) {
+      if (typeof csrfToken === "string") {
         await api("/api/auth/logout", {
           method: "POST",
           headers: {
@@ -100,7 +105,9 @@ export function useAuth() {
       if (stored) {
         try {
           const parsed: User = JSON.parse(stored);
-          queryClient.setQueryData(["/api/auth/user"], parsed);
+          if (parsed?.id && parsed?.email) {
+            queryClient.setQueryData(["/api/auth/user"], parsed);
+          }
         } catch (err) {
           console.warn("Failed to parse local user:", err);
           localStorage.removeItem(STORAGE_KEY);

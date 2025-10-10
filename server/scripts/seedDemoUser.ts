@@ -20,10 +20,10 @@ async function seedDemoUser() {
   const hashedPassword = await bcrypt.hash(plainPassword, 12);
 
   await db.insert(users).values({
-    name: 'Demo Admin',
     email,
     password: hashedPassword,
-    role: 'ADMIN', // Change if your schema uses something else
+    role: 'admin',
+    // name: 'Demo Admin' // Only include if your schema supports it
   });
 
   console.log('✅ Demo user created!');

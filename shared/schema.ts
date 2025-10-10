@@ -18,7 +18,6 @@ import { z } from "zod";
 /*                                  ENUMS                                     */
 /* -------------------------------------------------------------------------- */
 
-// Safer enum types for consistency and validation
 export const userRoleEnum = pgEnum("user_role", [
   "admin",
   "coordinator",
@@ -90,6 +89,7 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: varchar("email").unique().notNull(),
+  password: varchar("password").notNull(), // ✅ Added field
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),

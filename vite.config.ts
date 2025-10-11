@@ -5,9 +5,6 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 
-// ✅ No need to import or inject `crypto` — browsers already have it
-// const crypto = require("crypto");
-
 export default defineConfig({
   // ✅ Vite project root
   root: resolve(__dirname, "client"),
@@ -18,7 +15,7 @@ export default defineConfig({
   // ✅ Define build-time environment variables
   define: {
     "import.meta.env.VITE_API_URL": JSON.stringify(
-      process.env.VITE_API_URL || "https://api.lifebridge.online"
+      process.env.VITE_API_URL || "https://lifebridge.online"
     ),
   },
 
@@ -27,7 +24,7 @@ export default defineConfig({
     alias: {
       "@": resolve(__dirname, "client", "src"),
       "@shared": resolve(__dirname, "shared"),
-      "@assets": resolve(__dirname, "attached_assets"), // 💡 Make sure this path exists!
+      "@assets": resolve(__dirname, "attached_assets"),
     },
   },
 
@@ -65,7 +62,7 @@ export default defineConfig({
     },
     fs: {
       strict: true,
-      deny: ["**/.*"], // Prevent .env/.git exposure
+      deny: ["**/.*"],
     },
   },
 });

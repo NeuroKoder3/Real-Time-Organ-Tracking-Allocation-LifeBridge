@@ -60,7 +60,7 @@ const app: Express = express();
 // ---------------------------------------------------------
 const allowedOrigins = [
   "https://lifebridge-opotracking.netlify.app",
-  "https://api.lifebridge.online",
+  "https://lifebridge.online",
   "https://lifebridge.online",
   "http://localhost:5173",
   "http://127.0.0.1:5173",

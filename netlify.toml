@@ -8,15 +8,15 @@
   NODE_ENV = "production"
   NODE_VERSION = "22.12.0"
   PNPM_VERSION = "8"
-  VITE_API_URL = "https://api.lifebridge.online"
+  VITE_API_URL = "https://lifebridge.online"
 
 [functions]
   node_bundler = "esbuild"
 
-# Redirect API calls to backend
+# Redirect API calls to backend (pointing at lifebridge.online)
 [[redirects]]
   from = "/api/*"
-  to = "https://api.lifebridge.online/:splat"
+  to = "https://lifebridge.online/api/:splat"
   status = 200
   force = true
 

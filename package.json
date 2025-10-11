@@ -132,7 +132,7 @@
     "@types/express-session": "^1.18.0",
     "@types/jest": "^29.5.12",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "20.19.0",
+    "@types/node": "^20.19.0",
     "@types/passport": "^1.0.16",
     "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.15.5",
@@ -153,8 +153,9 @@
     "supertest": "^7.1.1",
     "ts-jest": "^29.2.5",
     "ts-morph": "^27.0.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.1",
-    "typescript": "5.6.3"
+    "typescript": "^5.6.3"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

@@ -40,6 +40,7 @@ import express, {
   type RequestHandler,
 } from "express";
 import helmet from "helmet";
+import cors from "cors";
 import csurf from "csurf";
 import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
@@ -56,38 +57,41 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 
 // ---------------------------------------------------------
-// ✅ Allowed Origins
+// ✅ Allowed Origins (deduped)
 // ---------------------------------------------------------
 const allowedOrigins = [
-  "https://lifebridge-opotracking.netlify.app",
-  "https://lifebridge.online",
-  "https://lifebridge.online",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:5000",
+  "https://lifebridge-opotracking.netlify.app", // Frontend on Netlify
+  "https://lifebridge.online",                  // Primary domain
+  "http://localhost:5173",                      // Local dev (vite)
+  "http://127.0.0.1:5173",                      // Local dev (vite)
+  "http://localhost:5000",                      // Local server (optional)
 ];
 
 // ---------------------------------------------------------
-// ✅ CORS Middleware
+// ✅ CORS Middleware (using `cors` package)
 // ---------------------------------------------------------
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-  }
-  res.header("Vary", "Origin");
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
-  );
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like curl, server-to-server, mobile clients)
+    if (!origin) return callback(null, true);
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-  next();
-});
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Deny other origins
+    return callback(new Error("CORS policy: This origin is not allowed"), false);
+  },
+  credentials: true, // Allow cookies to be sent/received
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+// Apply CORS globally (and ensure preflight is handled)
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // handle preflight for all routes
 
 // ---------------------------------------------------------
 // ✅ Security Middleware
@@ -123,7 +127,7 @@ if (process.env.NODE_ENV !== "test") {
       "/api/_seed-admin",
       "/_seed-demo",
       "/_seed-admin",
-      "/_debug"
+      "/_debug",
     ];
 
     if (csrfExempt.includes(req.path)) {

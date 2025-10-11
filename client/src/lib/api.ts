@@ -59,10 +59,9 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include", // Ensures cookies (CSRF/session) are sent
+    credentials: "include", // For session/cookie support (if used)
   };
 
-  // ✅ Try sending the request
   let response: Response;
   try {
     const fullUrl = `${BASE_URL}${path}`;
@@ -75,7 +74,6 @@ export async function api<T = unknown>(
     throw new Error("Network error: Unable to reach backend server.");
   }
 
-  // 🔒 Handle unauthorized
   if (response.status === 401) {
     console.warn("[API] Unauthorized — clearing session and redirecting.");
     localStorage.removeItem("lifebridge_user");
@@ -83,38 +81,25 @@ export async function api<T = unknown>(
     throw new Error("Unauthorized: Please sign in again.");
   }
 
-  // ✅ Handle no content or not modified
   if (response.status === 204 || response.status === 304) {
-    if (import.meta.env.DEV) {
-      console.info(`ℹ️ [API] ${response.status} No content / Not modified: ${path}`);
-    }
     return {} as T;
   }
 
-  // ❌ Handle error responses
   if (!response.ok) {
     let message = `HTTP ${response.status}`;
     try {
       const errorText = await response.text();
       if (errorText) message = errorText;
-    } catch (err) {
-      console.warn("⚠️ Could not read error message:", err);
+    } catch {
+      /* ignore */
     }
 
     console.error(`❌ [API] Request failed (${response.status}): ${message}`);
     throw new Error(message);
   }
 
-  // ✅ Attempt JSON parsing safely
   const data = await safeJsonParse<T>(response);
-  if (data === null) {
-    if (import.meta.env.DEV) {
-      console.warn("⚠️ [API] Empty or invalid JSON response from:", path);
-    }
-    return {} as T;
-  }
-
-  return data;
+  return data ?? ({} as T);
 }
 
 export default api;

@@ -15,17 +15,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-
-// ✅ Import logo with correct typing (e.g., for Vite)
 import lifebridgeLogo from "@/assets/lifebridge-logo.jpg";
 
-// -----------------------------
-// Environment + Config
-// -----------------------------
-const API_URL = import.meta.env.VITE_API_URL ?? window.location.origin;
-
 type Feature = {
-  icon: LucideIcon; // ✅ Strongly typed icon component
+  icon: LucideIcon;
   title: string;
   description: string;
 };

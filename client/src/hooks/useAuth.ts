@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api"; // ✅ Ensure this correctly resolves to api.ts
+import api from "@/lib/api"; // ✅ Make sure path resolves correctly
 
 interface User {
   id: string;
@@ -21,7 +21,7 @@ export function useAuth() {
   const queryClient = useQueryClient();
 
   // ✅ Fetch current user session
-  const { data: user, isLoading } = useQuery<User | null, Error, User | null>({
+  const { data: user, isLoading } = useQuery<User | null>({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
       try {
@@ -38,38 +38,33 @@ export function useAuth() {
   // ✅ Secure login with CSRF protection
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      try {
-        // Step 1: Get CSRF token
-        const csrfRes = await api<CsrfResponse>("/api/csrf-token");
-        const csrfToken = csrfRes?.csrfToken;
+      // Step 1: Get CSRF token
+      const csrfRes = await api<CsrfResponse>("/api/csrf-token");
+      const csrfToken = csrfRes?.csrfToken;
 
-        if (typeof csrfToken !== "string" || !csrfToken.trim()) {
-          throw new Error("CSRF token missing or invalid.");
-        }
-
-        // Step 2: Attempt login
-        const userData = await api<User>("/api/auth/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": csrfToken,
-          },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!userData || !userData.id) {
-          throw new Error("Invalid user data returned from login.");
-        }
-
-        // Step 3: Cache user in localStorage and React Query
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-        queryClient.setQueryData(["/api/auth/user"], userData);
-
-        return userData;
-      } catch (err) {
-        console.error("Login error:", err);
-        throw err;
+      if (!csrfToken?.trim()) {
+        throw new Error("CSRF token missing or invalid.");
       }
+
+      // Step 2: Login
+      const userData = await api<User>("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!userData?.id) {
+        throw new Error("Invalid user data returned from login.");
+      }
+
+      // Step 3: Save to localStorage and cache
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      queryClient.setQueryData(["/api/auth/user"], userData);
+
+      return userData;
     },
     [queryClient]
   );
@@ -80,7 +75,7 @@ export function useAuth() {
       const csrfRes = await api<CsrfResponse>("/api/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
 
-      if (typeof csrfToken === "string") {
+      if (csrfToken) {
         await api("/api/auth/logout", {
           method: "POST",
           headers: {
@@ -98,7 +93,7 @@ export function useAuth() {
     window.location.href = "/";
   }, [queryClient]);
 
-  // ✅ Restore from localStorage if user is undefined
+  // ✅ Restore from localStorage if user is missing
   useEffect(() => {
     if (!user) {
       const stored = localStorage.getItem(STORAGE_KEY);

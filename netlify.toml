@@ -1,4 +1,4 @@
-﻿# netlify.toml — LifeBridge (updated)
+# netlify.toml — LifeBridge (updated)
 [build]
   # Install and build only the client (Netlify will build the frontend)
   command = "pnpm install --frozen-lockfile && pnpm run build:client"

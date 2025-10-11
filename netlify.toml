@@ -1,4 +1,4 @@
-# netlify.toml — LifeBridge (updated)
+# netlify.toml â€” LifeBridge (updated)
 [build]
   # Install and build only the client (Netlify will build the frontend)
   command = "pnpm install --frozen-lockfile && pnpm run build:client"
@@ -7,8 +7,8 @@
 [build.environment]
   NODE_ENV = "production"
   # Use Node LTS for better compatibility on Netlify
-  NODE_VERSION = "18"
-  # Keep pnpm version if desired — Netlify will use pnpm if pnpm-lock.yaml exists
+  NODE_VERSION = "22.12.0"
+  # Keep pnpm version if desired â€” Netlify will use pnpm if pnpm-lock.yaml exists
   PNPM_VERSION = "8"
   # Point the built client at the Render backend (working URL)
   VITE_API_URL = "https://real-time-organ-tracking-allocation.onrender.com"

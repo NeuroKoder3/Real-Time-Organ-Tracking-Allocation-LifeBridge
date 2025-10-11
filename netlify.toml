@@ -1,4 +1,4 @@
-# Netlify configuration for LifeBridge
+﻿# Netlify configuration for LifeBridge
 
 [build]
   command = "pnpm install --frozen-lockfile && pnpm run build:client"
@@ -8,7 +8,7 @@
   NODE_ENV = "production"
   NODE_VERSION = "22.12.0"
   PNPM_VERSION = "8"
-  VITE_API_URL = "https://lifebridge.online"
+  VITE_API_URL = "https://real-time-organ-tracking-allocation.onrender.com"
 
 [functions]
   node_bundler = "esbuild"
@@ -56,3 +56,4 @@
   [headers.values]
     Content-Type = "image/jpeg"
     Cache-Control = "public, max-age=31536000, immutable"
+

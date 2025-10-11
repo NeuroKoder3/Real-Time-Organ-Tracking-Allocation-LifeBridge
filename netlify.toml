@@ -1,22 +1,25 @@
-﻿# Netlify configuration for LifeBridge
-
+﻿# netlify.toml — LifeBridge (updated)
 [build]
+  # Install and build only the client (Netlify will build the frontend)
   command = "pnpm install --frozen-lockfile && pnpm run build:client"
   publish = "client/dist"
 
 [build.environment]
   NODE_ENV = "production"
-  NODE_VERSION = "22.12.0"
+  # Use Node LTS for better compatibility on Netlify
+  NODE_VERSION = "18"
+  # Keep pnpm version if desired — Netlify will use pnpm if pnpm-lock.yaml exists
   PNPM_VERSION = "8"
+  # Point the built client at the Render backend (working URL)
   VITE_API_URL = "https://real-time-organ-tracking-allocation.onrender.com"
 
 [functions]
   node_bundler = "esbuild"
 
-# Redirect API calls to backend (pointing at lifebridge.online)
+# Redirect API calls to the Render backend directly (Netlify proxies /api to Render)
 [[redirects]]
   from = "/api/*"
-  to = "https://lifebridge.online/api/:splat"
+  to = "https://real-time-organ-tracking-allocation.onrender.com/api/:splat"
   status = 200
   force = true
 
@@ -30,30 +33,24 @@
 [[headers]]
   for = "/assets/*"
   [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/**/*.css"
   [headers.values]
-    Content-Type = "text/css; charset=utf-8"
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/**/*.svg"
   [headers.values]
-    Content-Type = "image/svg+xml; charset=utf-8"
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/**/*.png"
   [headers.values]
-    Content-Type = "image/png"
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
   for = "/**/*.jpg"
   [headers.values]
-    Content-Type = "image/jpeg"
     Cache-Control = "public, max-age=31536000, immutable"
-

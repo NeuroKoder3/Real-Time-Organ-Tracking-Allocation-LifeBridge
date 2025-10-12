@@ -30,13 +30,15 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const transport = await storage.createTransport({
-      organId,
-      courierId,
-      startLocation,
-      endLocation,
-      status: status ?? "in_transit",
-    });
+const transport = await storage.createTransport({
+  organId,
+  courierId,
+  startLocation,
+  endLocation,
+  transportMode: "ground", // ✅ required field
+  status: status ?? "scheduled",
+});
+
 
     res.status(201).json(transport);
   } catch (error) {

@@ -30,12 +30,14 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const allocation = await storage.createAllocation({
-      organId,
-      recipientId,
-      courierId,
-      status: status ?? "pending",
-    });
+const allocation = await storage.createAllocation({
+  organId,
+  recipientId,
+  courierId,
+  matchScore: "1.0", // ✅ required field
+  status: status ?? "proposed",
+});
+
 
     res.status(201).json(allocation);
   } catch (error) {

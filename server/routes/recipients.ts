@@ -30,13 +30,17 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const recipient = await storage.createRecipient({
-      firstName,
-      lastName,
-      bloodType,
-      organNeeded,
-      hospital,
-    });
+const recipient = await storage.createRecipient({
+  firstName,
+  lastName,
+  bloodType,
+  organNeeded,
+  hospital,
+  location: "Unknown",          // ✅ required
+  urgencyStatus: "medium",      // ✅ required
+  waitlistDate: new Date(),     // ✅ required
+});
+
 
     res.status(201).json(recipient);
   } catch (error) {

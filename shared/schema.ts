@@ -149,7 +149,7 @@ export const recipients = pgTable(
     urgencyStatus: varchar("urgency_status").notNull(),
     waitlistDate: timestamp("waitlist_date", { withTimezone: true }).notNull(),
     location: varchar("location").notNull(),
-    hospital: varchar("hospital"), // ✅ Added field for frontend consistency
+    hospital: varchar("hospital"),
     hospitalId: varchar("hospital_id"),
     medicalData: jsonb("medical_data"),
     hlaType: jsonb("hla_type"),
@@ -176,7 +176,7 @@ export const organs = pgTable(
       .notNull(),
     organType: varchar("organ_type").notNull(),
     bloodType: varchar("blood_type").notNull(),
-    condition: varchar("condition"), // ✅ Added for organ condition
+    condition: varchar("condition"),
     status: organStatusEnum("status").notNull().default("available"),
     viabilityHours: integer("viability_hours").notNull(),
     preservationStartTime: timestamp("preservation_start_time", { withTimezone: true }).notNull(),
@@ -210,7 +210,7 @@ export const allocations = pgTable(
     recipientId: uuid("recipient_id")
       .references(() => recipients.id, { onDelete: "cascade" })
       .notNull(),
-    courierId: uuid("courier_id").references(() => users.id), // ✅ Added for courier tracking
+    courierId: uuid("courier_id").references(() => users.id),
     matchScore: decimal("match_score", { precision: 5, scale: 2 }).notNull(),
     compatibilityData: jsonb("compatibility_data"),
     status: allocationStatusEnum("status").notNull().default("proposed"),
@@ -235,8 +235,8 @@ export const transports = pgTable(
       .references(() => organs.id, { onDelete: "cascade" })
       .notNull(),
     allocationId: uuid("allocation_id").references(() => allocations.id, { onDelete: "set null" }),
-    courierId: uuid("courier_id").references(() => users.id).notNull(), // ✅ Added for consistency
-    startLocation: varchar("start_location"), // ✅ Added for backend/frontend sync
+    courierId: uuid("courier_id").references(() => users.id).notNull(),
+    startLocation: varchar("start_location"),
     endLocation: varchar("end_location"),
     transportMode: transportModeEnum("transport_mode").notNull(),
     status: transportStatusEnum("status").notNull().default("scheduled"),
@@ -260,7 +260,7 @@ export const transports = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                                   Messages, Custody Logs, Metrics, Audits  */
+/*                              Messages / Logs / Metrics                     */
 /* -------------------------------------------------------------------------- */
 
 export const messages = pgTable("messages", {
@@ -338,10 +338,6 @@ export const auditLogs = pgTable(
   ]
 );
 
-/* -------------------------------------------------------------------------- */
-/*                                 Auth Audit Logs                            */
-/* -------------------------------------------------------------------------- */
-
 export const authAuditLogs = pgTable(
   "auth_audit_logs",
   {
@@ -368,7 +364,7 @@ export const authAuditLogs = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                               TYPE EXPORTS & INSERT SCHEMAS                */
+/*                             TYPE EXPORTS                                   */
 /* -------------------------------------------------------------------------- */
 
 export type User = typeof users.$inferSelect;
@@ -382,6 +378,8 @@ export type CustodyLog = typeof custodyLogs.$inferSelect;
 export type Metric = typeof metrics.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type AuthAuditLog = typeof authAuditLogs.$inferSelect;
+
+/* Insert Schemas ----------------------------------------------------------- */
 
 export const insertDonorSchema = createInsertSchema(donors).omit({
   id: true,
@@ -426,7 +424,34 @@ export const insertAuthAuditLogSchema = createInsertSchema(authAuditLogs).omit({
 });
 
 /* -------------------------------------------------------------------------- */
-/*                             ROLE & UI TYPES                                */
+/*                           Type Inference / Legacy Aliases                  */
+/* -------------------------------------------------------------------------- */
+
+export type InsertDonorData = z.infer<typeof insertDonorSchema>;
+export type InsertRecipientData = z.infer<typeof insertRecipientSchema>;
+export type InsertOrganData = z.infer<typeof insertOrganSchema>;
+export type InsertAllocationData = z.infer<typeof insertAllocationSchema>;
+export type InsertTransportData = z.infer<typeof insertTransportSchema>;
+export type InsertMessageData = z.infer<typeof insertMessageSchema>;
+export type InsertCustodyLogData = z.infer<typeof insertCustodyLogSchema>;
+export type InsertMetricData = z.infer<typeof insertMetricSchema>;
+export type InsertAuditLogData = z.infer<typeof insertAuditLogSchema>;
+export type InsertAuthAuditLogData = z.infer<typeof insertAuthAuditLogSchema>;
+
+export type UpsertUser = typeof users.$inferInsert;
+export type InsertDonor = InsertDonorData;
+export type InsertRecipient = InsertRecipientData;
+export type InsertOrgan = InsertOrganData;
+export type InsertAllocation = InsertAllocationData;
+export type InsertTransport = InsertTransportData;
+export type InsertMessage = InsertMessageData;
+export type InsertCustodyLog = InsertCustodyLogData;
+export type InsertMetric = InsertMetricData;
+export type InsertAuditLog = InsertAuditLogData;
+export type InsertAuthAuditLog = InsertAuthAuditLogData;
+
+/* -------------------------------------------------------------------------- */
+/*                            UI-Friendly Interfaces                          */
 /* -------------------------------------------------------------------------- */
 
 export type UserRole = "admin" | "coordinator" | "surgeon" | "transport";
@@ -444,5 +469,10 @@ export interface UIOrgan extends Organ {
   hlaMarkers?: string;
   specialRequirements?: string;
 }
+
+
+
+
+
 
 export default sessions;

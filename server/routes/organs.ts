@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Router as ExpressRouter } from "express";
+import type { Router as ExpressRouter, Request, Response } from "express";
 import authenticateToken from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
@@ -7,28 +7,40 @@ const router: ExpressRouter = Router();
 
 /**
  * GET /api/organs
- * Returns all registered organs
+ * → List all organs in storage
  */
-router.get("/", authenticateToken, async (_req, res) => {
+router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
-    const organs = await storage.getOrgans?.() ?? [];
+    const organs = await storage.getOrgans();
     res.json(organs);
   } catch (error) {
-    console.error("Error fetching organs:", error);
-    res.status(500).json({ message: "Failed to load organs" });
+    console.error("[Organs] GET error:", error);
+    res.status(500).json({ message: "Failed to fetch organs" });
   }
 });
 
 /**
  * POST /api/organs
- * Registers a new organ
+ * → Register a new organ
  */
-router.post("/", authenticateToken, async (req, res) => {
+router.post("/", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const organ = await storage.createOrgan?.(req.body);
+    const { donorId, organType, bloodType, condition, location } = req.body;
+    if (!organType || !donorId) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const organ = await storage.createOrgan({
+      donorId,
+      organType,
+      bloodType,
+      condition,
+      location,
+    });
+
     res.status(201).json(organ);
   } catch (error) {
-    console.error("Error creating organ:", error);
+    console.error("[Organs] POST error:", error);
     res.status(500).json({ message: "Failed to register organ" });
   }
 });

@@ -1,35 +1,47 @@
 import { Router } from "express";
-import type { Router as ExpressRouter } from "express";
+import type { Router as ExpressRouter, Request, Response } from "express";
 import authenticateToken from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
 /**
- * GET /api/organs
- * Returns all registered organs
+ * GET /api/recipients
+ * → List all registered recipients
  */
-router.get("/", authenticateToken, async (_req, res) => {
+router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
-    const organs = await storage.getOrgans?.() ?? [];
-    res.json(organs);
+    const recipients = await storage.getRecipients();
+    res.json(recipients);
   } catch (error) {
-    console.error("Error fetching organs:", error);
-    res.status(500).json({ message: "Failed to load organs" });
+    console.error("[Recipients] GET error:", error);
+    res.status(500).json({ message: "Failed to fetch recipients" });
   }
 });
 
 /**
- * POST /api/organs
- * Registers a new organ
+ * POST /api/recipients
+ * → Add a new recipient
  */
-router.post("/", authenticateToken, async (req, res) => {
+router.post("/", authenticateToken, async (req: Request, res: Response) => {
   try {
-    const organ = await storage.createOrgan?.(req.body);
-    res.status(201).json(organ);
+    const { firstName, lastName, bloodType, organNeeded, hospital } = req.body;
+    if (!firstName || !lastName || !organNeeded) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const recipient = await storage.createRecipient({
+      firstName,
+      lastName,
+      bloodType,
+      organNeeded,
+      hospital,
+    });
+
+    res.status(201).json(recipient);
   } catch (error) {
-    console.error("Error creating organ:", error);
-    res.status(500).json({ message: "Failed to register organ" });
+    console.error("[Recipients] POST error:", error);
+    res.status(500).json({ message: "Failed to add recipient" });
   }
 });
 

@@ -89,7 +89,7 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: varchar("email").unique().notNull(),
-  password: varchar("password").notNull(), // ✅ Added field
+  password: varchar("password").notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -149,6 +149,7 @@ export const recipients = pgTable(
     urgencyStatus: varchar("urgency_status").notNull(),
     waitlistDate: timestamp("waitlist_date", { withTimezone: true }).notNull(),
     location: varchar("location").notNull(),
+    hospital: varchar("hospital"), // ✅ Added field for frontend consistency
     hospitalId: varchar("hospital_id"),
     medicalData: jsonb("medical_data"),
     hlaType: jsonb("hla_type"),
@@ -175,6 +176,7 @@ export const organs = pgTable(
       .notNull(),
     organType: varchar("organ_type").notNull(),
     bloodType: varchar("blood_type").notNull(),
+    condition: varchar("condition"), // ✅ Added for organ condition
     status: organStatusEnum("status").notNull().default("available"),
     viabilityHours: integer("viability_hours").notNull(),
     preservationStartTime: timestamp("preservation_start_time", { withTimezone: true }).notNull(),
@@ -208,6 +210,7 @@ export const allocations = pgTable(
     recipientId: uuid("recipient_id")
       .references(() => recipients.id, { onDelete: "cascade" })
       .notNull(),
+    courierId: uuid("courier_id").references(() => users.id), // ✅ Added for courier tracking
     matchScore: decimal("match_score", { precision: 5, scale: 2 }).notNull(),
     compatibilityData: jsonb("compatibility_data"),
     status: allocationStatusEnum("status").notNull().default("proposed"),
@@ -232,15 +235,17 @@ export const transports = pgTable(
       .references(() => organs.id, { onDelete: "cascade" })
       .notNull(),
     allocationId: uuid("allocation_id").references(() => allocations.id, { onDelete: "set null" }),
+    courierId: uuid("courier_id").references(() => users.id).notNull(), // ✅ Added for consistency
+    startLocation: varchar("start_location"), // ✅ Added for backend/frontend sync
+    endLocation: varchar("end_location"),
     transportMode: transportModeEnum("transport_mode").notNull(),
     status: transportStatusEnum("status").notNull().default("scheduled"),
-    originLocation: varchar("origin_location").notNull(),
-    destinationLocation: varchar("destination_location").notNull(),
-    scheduledPickup: timestamp("scheduled_pickup", { withTimezone: true }).notNull(),
-    scheduledDelivery: timestamp("scheduled_delivery", { withTimezone: true }).notNull(),
+    originLocation: varchar("origin_location"),
+    destinationLocation: varchar("destination_location"),
+    scheduledPickup: timestamp("scheduled_pickup", { withTimezone: true }),
+    scheduledDelivery: timestamp("scheduled_delivery", { withTimezone: true }),
     actualPickup: timestamp("actual_pickup", { withTimezone: true }),
     actualDelivery: timestamp("actual_delivery", { withTimezone: true }),
-    courierId: uuid("courier_id").references(() => users.id),
     carrierInfo: jsonb("carrier_info"),
     trackingNumber: varchar("tracking_number"),
     currentGpsLat: decimal("current_gps_lat", { precision: 9, scale: 6 }),
@@ -255,7 +260,7 @@ export const transports = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                                   Messages                                 */
+/*                                   Messages, Custody Logs, Metrics, Audits  */
 /* -------------------------------------------------------------------------- */
 
 export const messages = pgTable("messages", {
@@ -271,10 +276,6 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-/* -------------------------------------------------------------------------- */
-/*                                Custody Logs                                */
-/* -------------------------------------------------------------------------- */
-
 export const custodyLogs = pgTable("custody_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
   organId: uuid("organ_id")
@@ -289,10 +290,6 @@ export const custodyLogs = pgTable("custody_logs", {
   signature: varchar("signature"),
 });
 
-/* -------------------------------------------------------------------------- */
-/*                                   Metrics                                  */
-/* -------------------------------------------------------------------------- */
-
 export const metrics = pgTable("metrics", {
   id: uuid("id").defaultRandom().primaryKey(),
   metricType: varchar("metric_type").notNull(),
@@ -302,10 +299,6 @@ export const metrics = pgTable("metrics", {
   date: timestamp("date", { withTimezone: true }).notNull(),
   metadata: jsonb("metadata"),
 });
-
-/* -------------------------------------------------------------------------- */
-/*                                 Audit Logs                                 */
-/* -------------------------------------------------------------------------- */
 
 export const auditLogs = pgTable(
   "audit_logs",
@@ -346,7 +339,7 @@ export const auditLogs = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                               Auth Audit Logs                               */
+/*                                 Auth Audit Logs                            */
 /* -------------------------------------------------------------------------- */
 
 export const authAuditLogs = pgTable(
@@ -375,7 +368,7 @@ export const authAuditLogs = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/*                                 TYPES & SCHEMAS                            */
+/*                               TYPE EXPORTS & INSERT SCHEMAS                */
 /* -------------------------------------------------------------------------- */
 
 export type User = typeof users.$inferSelect;
@@ -389,10 +382,6 @@ export type CustodyLog = typeof custodyLogs.$inferSelect;
 export type Metric = typeof metrics.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type AuthAuditLog = typeof authAuditLogs.$inferSelect;
-
-/* -------------------------------------------------------------------------- */
-/*                              Insert Schemas                                */
-/* -------------------------------------------------------------------------- */
 
 export const insertDonorSchema = createInsertSchema(donors).omit({
   id: true,
@@ -437,43 +426,10 @@ export const insertAuthAuditLogSchema = createInsertSchema(authAuditLogs).omit({
 });
 
 /* -------------------------------------------------------------------------- */
-/*                             Type Inference                                 */
+/*                             ROLE & UI TYPES                                */
 /* -------------------------------------------------------------------------- */
 
-export type InsertDonorData = z.infer<typeof insertDonorSchema>;
-export type InsertRecipientData = z.infer<typeof insertRecipientSchema>;
-export type InsertOrganData = z.infer<typeof insertOrganSchema>;
-export type InsertAllocationData = z.infer<typeof insertAllocationSchema>;
-export type InsertTransportData = z.infer<typeof insertTransportSchema>;
-export type InsertMessageData = z.infer<typeof insertMessageSchema>;
-export type InsertCustodyLogData = z.infer<typeof insertCustodyLogSchema>;
-export type InsertMetricData = z.infer<typeof insertMetricSchema>;
-export type InsertAuditLogData = z.infer<typeof insertAuditLogSchema>;
-export type InsertAuthAuditLogData = z.infer<typeof insertAuthAuditLogSchema>;
-
-/* -------------------------------------------------------------------------- */
-/*                             Legacy Alias Fixes                              */
-/* -------------------------------------------------------------------------- */
-
-// ✅ For backward compatibility with server imports
-export type UpsertUser = typeof users.$inferInsert;
-export type InsertDonor = InsertDonorData;
-export type InsertRecipient = InsertRecipientData;
-export type InsertOrgan = InsertOrganData;
-export type InsertAllocation = InsertAllocationData;
-export type InsertTransport = InsertTransportData;
-export type InsertMessage = InsertMessageData;
-export type InsertCustodyLog = InsertCustodyLogData;
-export type InsertMetric = InsertMetricData;
-export type InsertAuditLog = InsertAuditLogData;
-export type InsertAuthAuditLog = InsertAuthAuditLogData;
-
-// ✅ Roles (for RBAC and middleware)
 export type UserRole = "admin" | "coordinator" | "surgeon" | "transport";
-
-/* -------------------------------------------------------------------------- */
-/*                              UI-Friendly Types                              */
-/* -------------------------------------------------------------------------- */
 
 export interface UIRecipient extends Recipient {
   name: string;
@@ -488,9 +444,5 @@ export interface UIOrgan extends Organ {
   hlaMarkers?: string;
   specialRequirements?: string;
 }
-
-/* -------------------------------------------------------------------------- */
-/*                            Default Export (compat)                          */
-/* -------------------------------------------------------------------------- */
 
 export default sessions;

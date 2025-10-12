@@ -4,7 +4,7 @@ import rateLimit from "express-rate-limit";
 import { storage as baseStorage } from "./storage.js";
 import { createRBACStorage } from "./rbacStorage.js";
 import { createManualAuditLog } from "./auditMiddleware.js";
-import { enrichUserWithRole, withPermissions } from "./permissionMiddleware.js";
+import { enrichUserWithRole } from "./permissionMiddleware.js";
 import type { AuthenticatedRequest } from "./types.js";
 import type { UserRole } from "../shared/schema.js";
 import authenticateToken from "./authMiddleware.js";
@@ -13,7 +13,13 @@ import unosService from "./integrations/unosService.js";
 import complianceReports from "./complianceReports.js";
 import complianceStatus from "./complianceStatus.js";
 
-// ✅ Rate limiter for audit-logs endpoint: max 5 requests per minute per IP
+// ✅ Newly added imports for missing routes
+import organRoutes from "./routes/organs.js";
+import recipientRoutes from "./routes/recipients.js";
+import allocationRoutes from "./routes/allocations.js";
+import transportRoutes from "./routes/transports.js";
+
+// ✅ Rate limiter for audit-logs endpoint
 const auditLogsRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
@@ -21,6 +27,7 @@ const auditLogsRateLimiter = rateLimit({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // ---------------- AUTH ----------------
   app.use("/api/auth", authRoutes);
 
   app.get(
@@ -65,6 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // ---------------- ENCRYPTION STATUS ----------------
   app.get("/api/test/encryption-status", async (_req: Request, res: Response) => {
     try {
       const encryptionStatus = {
@@ -98,40 +106,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ---------------- COMPLIANCE ----------------
   app.use("/api/compliance", complianceReports);
   app.use("/api/compliance", complianceStatus);
 
-  // 🔽 Add your other routes (organs, recipients, allocations, transports)...
+  // ---------------- CORE FEATURE ROUTES ----------------
+  app.use("/api/organs", organRoutes);
+  app.use("/api/recipients", recipientRoutes);
+  app.use("/api/allocations", allocationRoutes);
+  app.use("/api/transports", transportRoutes);
 
   // ---------------- AUDIT LOGS ----------------
-  app.get("/api/audit-logs", authenticateToken, auditLogsRateLimiter, async (req: Request, res: Response) => {
-    const { user } = req as AuthenticatedRequest;
-    const userId = user?.claims?.sub;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized: Missing user ID" });
-    }
-
-    try {
-      const storage = createRBACStorage(baseStorage, user.role as UserRole, userId);
-      const dbUser = await storage.getUser(userId);
-      if (dbUser?.role !== "admin") {
-        await createManualAuditLog(req as AuthenticatedRequest, "unauthorized_access", {
-          entityType: "auditLogs",
-          entityId: "",
-          success: false,
-          errorMessage: "Forbidden: Admin access required",
-          errorCode: "FORBIDDEN",
-          phiAccessed: false,
-        });
-        return res.status(403).json({ message: "Forbidden: Admin access required" });
+  app.get(
+    "/api/audit-logs",
+    authenticateToken,
+    auditLogsRateLimiter,
+    async (req: Request, res: Response) => {
+      const { user } = req as AuthenticatedRequest;
+      const userId = user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized: Missing user ID" });
       }
-      const auditLogs = await storage.getAuditLogs({});
-      res.json(auditLogs);
-    } catch (error) {
-      console.error("Error fetching audit logs:", error);
-      res.status(500).json({ message: "Failed to fetch audit logs" });
+
+      try {
+        const storage = createRBACStorage(baseStorage, user.role as UserRole, userId);
+        const dbUser = await storage.getUser(userId);
+        if (dbUser?.role !== "admin") {
+          await createManualAuditLog(req as AuthenticatedRequest, "unauthorized_access", {
+            entityType: "auditLogs",
+            entityId: "",
+            success: false,
+            errorMessage: "Forbidden: Admin access required",
+            errorCode: "FORBIDDEN",
+            phiAccessed: false,
+          });
+          return res.status(403).json({ message: "Forbidden: Admin access required" });
+        }
+        const auditLogs = await storage.getAuditLogs({});
+        res.json(auditLogs);
+      } catch (error) {
+        console.error("Error fetching audit logs:", error);
+        res.status(500).json({ message: "Failed to fetch audit logs" });
+      }
     }
-  });
+  );
 
   // ---------------- SERVER ----------------
   const httpServer = createServer(app);

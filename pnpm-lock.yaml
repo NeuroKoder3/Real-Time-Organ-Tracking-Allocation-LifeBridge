@@ -307,7 +307,7 @@ importers:
         specifier: ^9.0.10
         version: 9.0.10
       '@types/node':
-        specifier: ^20.19.0
+        specifier: 20.19.0
         version: 20.19.0
       '@types/passport':
         specifier: ^1.0.16

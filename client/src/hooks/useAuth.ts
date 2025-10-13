@@ -21,33 +21,29 @@ const AUTH_QUERY_KEY = ["/auth/user"];
 export function useAuth() {
   const queryClient = useQueryClient();
 
-  // ✅ Fetch current user session
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
-        const response = await api<User | null>("/auth/user");
-        return response ?? null;
+        const userData = await api<User | null>("/auth/user");
+        return userData ?? null;
       } catch (err) {
-        console.warn("⚠️ Auth fetch failed:", err);
+        console.warn("[useAuth] fetch user failed:", err);
         return null;
       }
     },
     retry: false,
   });
 
-  // ✅ Secure login with CSRF protection
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      // Step 1: Get CSRF token
+      // Get CSRF token first
       const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
-
       if (!csrfToken?.trim()) {
-        throw new Error("CSRF token missing or invalid.");
+        throw new Error("CSRF token missing");
       }
 
-      // Step 2: Login
       const userData = await api<User>("/auth/login", {
         method: "POST",
         headers: {
@@ -58,24 +54,20 @@ export function useAuth() {
       });
 
       if (!userData?.id || !userData?.email) {
-        throw new Error("Invalid user data returned from login.");
+        throw new Error("Invalid login response");
       }
 
-      // Step 3: Save to localStorage and cache
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       queryClient.setQueryData(AUTH_QUERY_KEY, userData);
-
       return userData;
     },
     [queryClient]
   );
 
-  // ✅ Logout
   const logout = useCallback(async () => {
     try {
       const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
-
       if (csrfToken) {
         await api("/auth/logout", {
           method: "POST",
@@ -86,26 +78,29 @@ export function useAuth() {
         });
       }
     } catch (err) {
-      console.warn("⚠️ Logout error:", err);
+      console.warn("[useAuth] logout error:", err);
     }
 
     localStorage.removeItem(STORAGE_KEY);
     queryClient.setQueryData(AUTH_QUERY_KEY, null);
-    window.location.assign("/"); // ✅ More robust redirect
+
+    // Instead of unconditional redirect, you can check current path
+    if (window.location.pathname !== "/") {
+      window.location.assign("/");
+    }
   }, [queryClient]);
 
-  // ✅ Restore user from localStorage if needed
   useEffect(() => {
     if (!user) {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          const parsed: User = JSON.parse(stored);
+          const parsed = JSON.parse(stored) as User;
           if (parsed?.id && parsed?.email) {
             queryClient.setQueryData(AUTH_QUERY_KEY, parsed);
           }
         } catch (err) {
-          console.warn("⚠️ Failed to parse local user:", err);
+          console.warn("[useAuth] parse stored user failed:", err);
           localStorage.removeItem(STORAGE_KEY);
         }
       }

@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
-import fetch from "node-fetch"; // ✅ used for auto-seed
+import fetch from "node-fetch"; // ✅ used for auto‑seed
 
 if (fs.existsSync(".env")) {
   dotenv.config();
@@ -24,8 +24,11 @@ const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"];
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     const msg = `❌ ${key} must be set in your environment`;
-    if (process.env.NODE_ENV === "production") console.error(msg);
-    else throw new Error(msg);
+    if (process.env.NODE_ENV === "production") {
+      console.error(msg);
+    } else {
+      throw new Error(msg);
+    }
   }
 }
 
@@ -62,7 +65,7 @@ const app: Express = express();
 const allowedOrigins = [
   "https://lifebridge-opotracking.netlify.app",
   "https://lifebridge.online",
-  "https://www.lifebridge.online", // ✅ make sure www works
+  "https://www.lifebridge.online",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:5000",
@@ -78,7 +81,7 @@ app.use((req, res, next) => {
 });
 
 // ---------------------------------------------------------
-// ✅ CORS Middleware (safe, no errors thrown)
+// ✅ CORS Middleware (safe, no 500 errors on bad origin)
 // ---------------------------------------------------------
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -86,18 +89,25 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn(`❌ CORS blocked origin: ${origin}`);
-      callback(null, false); // DO NOT throw error
+      callback(null, false); // deny, but don’t throw
     }
   },
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "X-CSRF-Token",
+  ],
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // ✅ Preflight
+app.options("*", cors(corsOptions)); // Handle preflight requests
 
 // ---------------------------------------------------------
 // ✅ Security Middleware
@@ -115,7 +125,6 @@ app.use(cookieParser());
 // ---------------------------------------------------------
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
-
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -138,7 +147,6 @@ if (process.env.NODE_ENV !== "test") {
     if (csrfExempt.includes(req.path)) {
       return next();
     }
-
     return csrfMiddleware(req, res, next);
   });
 
@@ -153,7 +161,7 @@ if (process.env.NODE_ENV !== "test") {
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
-// Logging
+// Logging of API requests
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -198,7 +206,7 @@ app.use(errorHandler);
       server.listen(port, "0.0.0.0", async () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
 
-        // 🌱 Seed the demo user AFTER server is listening
+        // 🌱 Seed the demo user AFTER server starts
         try {
           const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
             method: "POST",

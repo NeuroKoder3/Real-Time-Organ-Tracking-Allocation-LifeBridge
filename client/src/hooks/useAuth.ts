@@ -16,7 +16,7 @@ interface CsrfResponse {
 }
 
 const STORAGE_KEY = "lifebridge_user";
-const AUTH_QUERY_KEY = ["/api/auth/user"];
+const AUTH_QUERY_KEY = ["/auth/user"];
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export function useAuth() {
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
-        const response = await api<User | null>("/api/auth/user");
+        const response = await api<User | null>("/auth/user");
         return response ?? null;
       } catch (err) {
         console.warn("⚠️ Auth fetch failed:", err);
@@ -39,14 +39,16 @@ export function useAuth() {
   // ✅ Secure login with CSRF protection
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      const csrfRes = await api<CsrfResponse>("/api/csrf-token");
+      // Step 1: Get CSRF token
+      const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
 
       if (!csrfToken?.trim()) {
         throw new Error("CSRF token missing or invalid.");
       }
 
-      const userData = await api<User>("/api/auth/login", {
+      // Step 2: Login
+      const userData = await api<User>("/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -59,6 +61,7 @@ export function useAuth() {
         throw new Error("Invalid user data returned from login.");
       }
 
+      // Step 3: Save to localStorage and cache
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       queryClient.setQueryData(AUTH_QUERY_KEY, userData);
 
@@ -70,11 +73,11 @@ export function useAuth() {
   // ✅ Logout
   const logout = useCallback(async () => {
     try {
-      const csrfRes = await api<CsrfResponse>("/api/csrf-token");
+      const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
 
       if (csrfToken) {
-        await api("/api/auth/logout", {
+        await api("/auth/logout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -88,7 +91,7 @@ export function useAuth() {
 
     localStorage.removeItem(STORAGE_KEY);
     queryClient.setQueryData(AUTH_QUERY_KEY, null);
-    window.location.assign("/"); // ✅ More robust than href redirect
+    window.location.assign("/"); // ✅ More robust redirect
   }, [queryClient]);
 
   // ✅ Restore user from localStorage if needed

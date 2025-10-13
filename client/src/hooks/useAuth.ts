@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api"; // ✅ Make sure path resolves correctly
+import api from "@/lib/api";
 
 interface User {
   id: string;
@@ -16,19 +16,20 @@ interface CsrfResponse {
 }
 
 const STORAGE_KEY = "lifebridge_user";
+const AUTH_QUERY_KEY = ["/api/auth/user"];
 
 export function useAuth() {
   const queryClient = useQueryClient();
 
   // ✅ Fetch current user session
   const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
         const response = await api<User | null>("/api/auth/user");
         return response ?? null;
       } catch (err) {
-        console.warn("Auth fetch failed:", err);
+        console.warn("⚠️ Auth fetch failed:", err);
         return null;
       }
     },
@@ -38,7 +39,6 @@ export function useAuth() {
   // ✅ Secure login with CSRF protection
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      // Step 1: Get CSRF token
       const csrfRes = await api<CsrfResponse>("/api/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
 
@@ -46,7 +46,6 @@ export function useAuth() {
         throw new Error("CSRF token missing or invalid.");
       }
 
-      // Step 2: Login
       const userData = await api<User>("/api/auth/login", {
         method: "POST",
         headers: {
@@ -56,13 +55,12 @@ export function useAuth() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!userData?.id) {
+      if (!userData?.id || !userData?.email) {
         throw new Error("Invalid user data returned from login.");
       }
 
-      // Step 3: Save to localStorage and cache
       localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-      queryClient.setQueryData(["/api/auth/user"], userData);
+      queryClient.setQueryData(AUTH_QUERY_KEY, userData);
 
       return userData;
     },
@@ -85,15 +83,15 @@ export function useAuth() {
         });
       }
     } catch (err) {
-      console.warn("Logout error:", err);
+      console.warn("⚠️ Logout error:", err);
     }
 
     localStorage.removeItem(STORAGE_KEY);
-    queryClient.setQueryData(["/api/auth/user"], null);
-    window.location.href = "/";
+    queryClient.setQueryData(AUTH_QUERY_KEY, null);
+    window.location.assign("/"); // ✅ More robust than href redirect
   }, [queryClient]);
 
-  // ✅ Restore from localStorage if user is missing
+  // ✅ Restore user from localStorage if needed
   useEffect(() => {
     if (!user) {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -101,10 +99,10 @@ export function useAuth() {
         try {
           const parsed: User = JSON.parse(stored);
           if (parsed?.id && parsed?.email) {
-            queryClient.setQueryData(["/api/auth/user"], parsed);
+            queryClient.setQueryData(AUTH_QUERY_KEY, parsed);
           }
         } catch (err) {
-          console.warn("Failed to parse local user:", err);
+          console.warn("⚠️ Failed to parse local user:", err);
           localStorage.removeItem(STORAGE_KEY);
         }
       }

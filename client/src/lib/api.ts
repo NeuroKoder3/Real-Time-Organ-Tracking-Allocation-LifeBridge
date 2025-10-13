@@ -4,8 +4,8 @@
  */
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL?.trim() || "http://localhost:5000";
-// ✅ Uses env var if defined, falls back to localhost
+  import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5000/api";
+// ✅ Uses correct production base URL, falls back to localhost/api during dev
 
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);
@@ -62,18 +62,21 @@ export async function api<T = unknown>(
     credentials: "include", // For session/cookie support (if used)
   };
 
+  const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+
+  if (import.meta.env.DEV) {
+    console.log(`📡 [API] Requesting: ${fullUrl}`);
+  }
+
   let response: Response;
   try {
-    const fullUrl = `${BASE_URL}${path}`;
-    if (import.meta.env.DEV) {
-      console.log(`📡 [API] Requesting: ${fullUrl}`);
-    }
     response = await fetch(fullUrl, fetchOptions);
   } catch (err) {
     console.error("🚨 [API] Network error or backend not reachable:", err);
     throw new Error("Network error: Unable to reach backend server.");
   }
 
+  // 🔒 Handle 401 (Unauthorized)
   if (response.status === 401) {
     console.warn("[API] Unauthorized — clearing session and redirecting.");
     localStorage.removeItem("lifebridge_user");
@@ -81,23 +84,26 @@ export async function api<T = unknown>(
     throw new Error("Unauthorized: Please sign in again.");
   }
 
+  // 🧩 Handle no-content responses
   if (response.status === 204 || response.status === 304) {
     return {} as T;
   }
 
+  // ❌ Handle HTTP errors
   if (!response.ok) {
     let message = `HTTP ${response.status}`;
     try {
       const errorText = await response.text();
       if (errorText) message = errorText;
     } catch {
-      /* ignore */
+      /* ignore parsing errors */
     }
 
     console.error(`❌ [API] Request failed (${response.status}): ${message}`);
     throw new Error(message);
   }
 
+  // ✅ Return parsed JSON
   const data = await safeJsonParse<T>(response);
   return data ?? ({} as T);
 }

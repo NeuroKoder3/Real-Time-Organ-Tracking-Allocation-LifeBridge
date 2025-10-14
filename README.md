@@ -56,7 +56,6 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 | Compliance    | HIPAA / GDPR / ISO 27001 aligned            |
 
 ---
-
 ## 🧱 System Architecture
 
 ```mermaid
@@ -66,6 +65,7 @@ flowchart TD
   B --> D["Encryption Layer: AES-256-GCM"]
   B --> E["Telemetry Engine: GPS and Real-Time Status"]
   B --> F["Audit Layer: Immutable Logs"]
+
 🗄️ Data Model Overview
 Entity	Description
 Users	Authorized personnel (admins, coordinators, surgeons, transporters)

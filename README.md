@@ -60,6 +60,7 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 ## 🧱 System Architecture
 
 ```mermaid
+
 flowchart TD
   A["Frontend: React and Vite"] --> B["Backend API: Node.js and Express"]
   B --> C["Database: PostgreSQL and Drizzle ORM"]
@@ -98,7 +99,6 @@ Telemetry Pipeline	Event-stream-ready architecture
 Observability	Prometheus/Grafana ready (planned)
 
 ⚙️ Operational Highlights
-
 Scalable Microservice Architecture — deployable via Docker Swarm, AWS ECS, or Kubernetes
 High Availability — stateless API + persistent database layer
 Disaster Recovery — volume persistence and daily backups

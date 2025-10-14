@@ -5,7 +5,6 @@
 > *Developed to bridge lives through precision, security, and innovation.*
 
 ---
-
 ## 🚀 Overview
 
 **LifeBridge** is an enterprise-grade, end-to-end platform for real-time organ tracking, allocation, and transport coordination between donor hospitals, transplant centers, and logistics teams.
@@ -56,6 +55,7 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 | Compliance    | HIPAA / GDPR / ISO 27001 aligned            |
 
 ---
+
 ## 🧱 System Architecture
 
 ```mermaid

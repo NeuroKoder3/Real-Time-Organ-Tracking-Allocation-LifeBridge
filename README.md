@@ -66,18 +66,19 @@ flowchart TD
   B --> C["Database: PostgreSQL and Drizzle ORM"]
   B --> D["Encryption Layer: AES-256-GCM"]
   B --> E["Telemetry Engine: GPS and Real-Time Status"]
-  B --> F["Audit Layer: Immutable Logs"]
+  B --> F["Audit Layer: Immutable Logs"]🗄️ Data Model Overview
 
-🗄️ Data Model Overview
-Entity	Description
-Users	Authorized personnel (admins, coordinators, surgeons, transporters)
-Donors	PHI-protected donor records and medical history
-Recipients	Transplant candidates with MELD/CPC scoring
-Organs	Individual organs with preservation and viability data
-Allocations	Organ-to-recipient match data and acceptance workflow
-Transports	GPS-tracked logistics and delivery chain
-Custody Logs	Chain-of-custody documentation and signatures
-Audit Logs	Regulatory trace of all user and system actions
+| Entity           | Description                                                         |
+| ---------------- | ------------------------------------------------------------------- |
+| **Users**        | Authorized personnel (admins, coordinators, surgeons, transporters) |
+| **Donors**       | PHI-protected donor records and medical history                     |
+| **Recipients**   | Transplant candidates with MELD/CPC scoring                         |
+| **Organs**       | Individual organs with preservation and viability data              |
+| **Allocations**  | Organ-to-recipient match data and acceptance workflow               |
+| **Transports**   | GPS-tracked logistics and delivery chain                            |
+| **Custody Logs** | Chain-of-custody documentation and signatures                       |
+| **Audit Logs**   | Regulatory trace of all user and system actions                     |
+
 
 🔐 Security Model
 Layer	Security Measure

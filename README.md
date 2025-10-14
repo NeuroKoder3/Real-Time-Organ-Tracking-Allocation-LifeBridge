@@ -65,8 +65,9 @@ flowchart TD
   B --> C["Database: PostgreSQL and Drizzle ORM"]
   B --> D["Encryption Layer: AES-256-GCM"]
   B --> E["Telemetry Engine: GPS and Real-Time Status"]
-  B --> F["Audit Layer: Immutable Logs"]🗄️ Data Model Overview
+  B --> F["Audit Layer: Immutable Logs"]
 
+🗄️ Data Model Overview
 Entity	Description
 Users	Authorized personnel (admins, coordinators, surgeons, transporters)
 Donors	PHI-protected donor records and medical history
@@ -95,16 +96,13 @@ Orchestration	Docker Compose multi-service
 Frontend Delivery	Netlify Edge CDN (or on-prem)
 Telemetry Pipeline	Event-stream-ready architecture
 Observability	Prometheus/Grafana ready (planned)
+
 ⚙️ Operational Highlights
 
 Scalable Microservice Architecture — deployable via Docker Swarm, AWS ECS, or Kubernetes
-
 High Availability — stateless API + persistent database layer
-
 Disaster Recovery — volume persistence and daily backups
-
 Low Latency — optimized for sub-200 ms response time
-
 Monitoring Ready — compatible with OpenTelemetry, Prometheus, and ELK stack
 
 🩺 Compliance Readiness
@@ -113,37 +111,27 @@ HIPAA	✅ AES encryption, audit logging, PHI traceability
 GDPR	✅ Data minimization, access control, deletion readiness
 ISO 27001	✅ Risk, event, and access management
 SOC 2 Type II	✅ Logging, integrity, confidentiality, availability
-🧭 Strategic Vision
 
+🧭 Strategic Vision
 LifeBridge unifies healthcare logistics, ethical compliance, and real-time intelligence into one cohesive ecosystem.
 
 🔮 Future Enhancements
-
 Live WebSocket telemetry for active organ tracking
-
 AI-assisted organ match scoring and outcome prediction
-
 Global multi-region deployment with redundancy
-
 Predictive analytics and transplant performance dashboards
-
 Vault-based encryption key lifecycle management
 
 👥 Contact & Enterprise Access
-
 LifeBridge is a proprietary system.
 Source code, build configurations, and internal architecture are not publicly distributed.
-
 For partnership, integration, or enterprise evaluation inquiries, please contact:
-
 📧 Nicole Gildehaus — System Architect
 📨 lilnicole0383@gmail.com
 
 🛡️ Legal Notice
-
 © 2025 LifeBridge. All rights reserved.
 Unauthorized access, distribution, or modification of this software is strictly prohibited.
 
 💡 Motto
-
 “Precision. Security. Humanity. Every heartbeat deserves a bridge.”

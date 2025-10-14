@@ -60,13 +60,13 @@ The system leverages **strong encryption**, **real-time telemetry**, and **compl
 ## 🧱 System Architecture
 
 ```mermaid
-
 flowchart TD
   A["Frontend: React and Vite"] --> B["Backend API: Node.js and Express"]
   B --> C["Database: PostgreSQL and Drizzle ORM"]
   B --> D["Encryption Layer: AES-256-GCM"]
   B --> E["Telemetry Engine: GPS and Real-Time Status"]
   B --> F["Audit Layer: Immutable Logs"]
+
 
 🗄️ Data Model Overview
 | Entity           | Description                                                         |

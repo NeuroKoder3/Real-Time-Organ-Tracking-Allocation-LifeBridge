@@ -66,8 +66,9 @@ flowchart TD
   B --> C["Database: PostgreSQL and Drizzle ORM"]
   B --> D["Encryption Layer: AES-256-GCM"]
   B --> E["Telemetry Engine: GPS and Real-Time Status"]
-  B --> F["Audit Layer: Immutable Logs"]🗄️ Data Model Overview
+  B --> F["Audit Layer: Immutable Logs"]
 
+🗄️ Data Model Overview
 | Entity           | Description                                                         |
 | ---------------- | ------------------------------------------------------------------- |
 | **Users**        | Authorized personnel (admins, coordinators, surgeons, transporters) |

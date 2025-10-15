@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { createContext, useContext, ReactNode } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -18,8 +17,8 @@ import Organs from "@/pages/Organs";
 import Recipients from "@/pages/Recipients";
 import Allocations from "@/pages/Allocations";
 import Transport from "@/pages/Transport";
+import TrackingPage from "@/pages/Tracking"; // ✅ Correctly imported
 
-// ✅ Updated to use your actual page components
 import Messages from "@/pages/Messages";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
@@ -166,7 +165,7 @@ function Router() {
           <Route path="recipients" element={<Recipients />} />
           <Route path="allocations" element={<Allocations />} />
           <Route path="transport" element={<Transport />} />
-          <Route path="tracking" element={<Transport />} />
+          <Route path="tracking" element={<TrackingPage />} /> {/* ✅ Correct component */}
           <Route path="messages" element={<Messages />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />

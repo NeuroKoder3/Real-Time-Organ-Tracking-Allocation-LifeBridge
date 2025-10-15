@@ -85,7 +85,7 @@ export default function Landing() {
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-      navigate("/dashboard");
+      navigate("/"); // ✅ Redirect to root instead of /dashboard
     } catch {
       setError("Login failed. Please check your credentials or backend.");
       toast({
@@ -109,7 +109,7 @@ export default function Landing() {
         title: "Demo Login Successful",
         description: "Welcome to the LifeBridge demo dashboard.",
       });
-      navigate("/dashboard");
+      navigate("/"); // ✅ Redirect to root instead of /dashboard
     } catch {
       setError("Demo login unavailable. Check backend API connection.");
       toast({

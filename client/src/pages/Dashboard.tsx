@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import type { Organ, Recipient } from "@shared/schema";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
@@ -119,7 +120,9 @@ function TransportCard({ transport }: { transport: Transport }) {
         </div>
       </div>
       <div className="text-right">
-        <Badge variant={statusColors[transport.status] ?? "default"}>{transport.status}</Badge>
+        <Badge variant={statusColors[transport.status] ?? "default"}>
+          {transport.status}
+        </Badge>
         <p className="text-xs text-muted-foreground mt-1">ETA: {transport.eta}</p>
       </div>
     </div>
@@ -175,6 +178,7 @@ function StatsCard({
 // ----------------------------
 export default function Dashboard() {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Secure fetch wrapper
   const fetchWithAuth = async <T,>(url: string): Promise<T> => {
@@ -223,11 +227,22 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" data-testid="button-view-map">
+          <Button
+            variant="outline"
+            data-testid="button-view-map"
+            onClick={() => {
+              navigate("/tracking");
+            }}
+          >
             <MapPin className="h-4 w-4 mr-2" />
             View Map
           </Button>
-          <Button data-testid="button-new-organ">
+          <Button
+            data-testid="button-new-organ"
+            onClick={() => {
+              navigate("/organs/new");
+            }}
+          >
             <Heart className="h-4 w-4 mr-2" />
             Register Organ
           </Button>
@@ -361,7 +376,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{r.organNeeded ?? "Unknown Organ"}</span>
                       <span>•</span>
-                      <span>{r.hospital ?? "Unknown Hospital"}</span>
+                      <span>{(r as any).hospital ?? "Unknown Hospital"}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

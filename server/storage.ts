@@ -86,7 +86,7 @@ export interface IStorage {
   // Transport operations
   getTransports(): Promise<Transport[]>;
   getTransport(id: string): Promise<Transport | undefined>;
-  getActiveTransports(): Promise<Transport[]>;
+  getActiveTransports(): Promise<(Transport & { currentLat: number; currentLng: number })[]>;
   createTransport(transport: InsertTransport): Promise<Transport>;
   updateTransport(id: string, updates: Partial<InsertTransport>): Promise<Transport>;
 
@@ -125,10 +125,10 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Search operations (unchanged)
+  // Search operations
   async searchRecipientsByName(firstName?: string, lastName?: string): Promise<Recipient[]> {
     let query = db.select().from(recipients);
-    const conditions: any[] = [];
+    const conditions: unknown[] = [];
 
     if (firstName) {
       const encryptedFirstName = encryptionService.encryptDeterministic(firstName);
@@ -143,10 +143,10 @@ export class DatabaseStorage implements IStorage {
       }
     }
     if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
+      query = (query.where(and(...(conditions as any[]))) as any);
     }
     const results = await query;
-    return results.map((recipient: Recipient) =>
+    return results.map((recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -162,7 +162,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(donors)
       .where(eq(donors.location, JSON.stringify(encryptedLocation)));
-    return results.map((donor: Donor) =>
+    return results.map((donor) =>
       encryptionService.decryptObject(
         donor,
         PHI_FIELDS.donors.fields,
@@ -178,7 +178,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(recipients)
       .where(eq(recipients.location, JSON.stringify(encryptedLocation)));
-    return results.map((recipient: Recipient) =>
+    return results.map((recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -214,9 +214,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== DONOR OPERATIONS ==========
+
   async getDonors(): Promise<Donor[]> {
     const donorsList = await db.select().from(donors).orderBy(desc(donors.createdAt));
-    return donorsList.map((donor: Donor) =>
+    return donorsList.map((donor) =>
       encryptionService.decryptObject(
         donor,
         PHI_FIELDS.donors.fields,
@@ -234,7 +235,7 @@ export class DatabaseStorage implements IStorage {
         PHI_FIELDS.donors.deterministicFields
       );
     }
-    return donor;
+    return undefined;
   }
 
   async createDonor(donorData: InsertDonor): Promise<Donor> {
@@ -270,9 +271,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== RECIPIENT OPERATIONS ==========
+
   async getRecipients(): Promise<Recipient[]> {
     const recipientsList = await db.select().from(recipients).orderBy(recipients.waitlistDate);
-    return recipientsList.map((recipient: Recipient) =>
+    return recipientsList.map((recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -290,7 +292,7 @@ export class DatabaseStorage implements IStorage {
         PHI_FIELDS.recipients.deterministicFields
       );
     }
-    return recipient;
+    return undefined;
   }
 
   async getWaitingRecipients(organType: string): Promise<Recipient[]> {
@@ -299,7 +301,7 @@ export class DatabaseStorage implements IStorage {
       .from(recipients)
       .where(and(eq(recipients.organNeeded, organType), eq(recipients.status, "waiting")))
       .orderBy(recipients.urgencyStatus, recipients.waitlistDate);
-    return recipientsList.map((recipient: Recipient) =>
+    return recipientsList.map((recipient) =>
       encryptionService.decryptObject(
         recipient,
         PHI_FIELDS.recipients.fields,
@@ -341,8 +343,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== ORGAN OPERATIONS ==========
+
   async getOrgans(): Promise<Organ[]> {
-    return await db.select().from(organs).orderBy(desc(organs.createdAt));
+    const organsList = await db.select().from(organs).orderBy(desc(organs.createdAt));
+    return organsList;
   }
 
   async getOrgan(id: string): Promise<Organ | undefined> {
@@ -351,15 +355,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAvailableOrgans(): Promise<Organ[]> {
-    return await db
+    const avail = await db
       .select()
       .from(organs)
       .where(eq(organs.status, "available"))
       .orderBy(organs.viabilityDeadline);
+    return avail;
   }
 
   async getOrgansByDonor(donorId: string): Promise<Organ[]> {
-    return await db.select().from(organs).where(eq(organs.donorId, donorId));
+    const organsList = await db.select().from(organs).where(eq(organs.donorId, donorId));
+    return organsList;
   }
 
   async createOrgan(organData: InsertOrgan): Promise<Organ> {
@@ -377,8 +383,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== ALLOCATION OPERATIONS ==========
+
   async getAllocations(): Promise<Allocation[]> {
-    return await db.select().from(allocations).orderBy(desc(allocations.proposedAt));
+    const allocationsList = await db.select().from(allocations).orderBy(desc(allocations.proposedAt));
+    return allocationsList;
   }
 
   async getAllocation(id: string): Promise<Allocation | undefined> {
@@ -410,13 +418,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAllocation(id: string, updates: Partial<InsertAllocation>): Promise<Allocation> {
-    const [allocation] = await db.update(allocations).set(updates).where(eq(allocations.id, id)).returning();
+    const [allocation] = await db
+      .update(allocations)
+      .set(updates)
+      .where(eq(allocations.id, id))
+      .returning();
     return allocation;
   }
 
   // ========== TRANSPORT OPERATIONS ==========
+
   async getTransports(): Promise<Transport[]> {
-    return await db.select().from(transports).orderBy(desc(transports.createdAt));
+    const transportsList = await db.select().from(transports).orderBy(desc(transports.createdAt));
+    return transportsList;
   }
 
   async getTransport(id: string): Promise<Transport | undefined> {
@@ -424,14 +438,20 @@ export class DatabaseStorage implements IStorage {
     return transport;
   }
 
-  async getActiveTransports(): Promise<Transport[]> {
-    const results = await db
-      .select()
-      .from(transports)
-      .where(sql`${transports.status} IN ('scheduled', 'in_progress')`)
-      .orderBy(transports.scheduledPickup);
-    return results;
-  }
+  async getActiveTransports(): Promise<(Transport & { currentLat: number; currentLng: number })[]> {
+  const results = await db
+    .select()
+    .from(transports)
+    .where(sql`${transports.status} IN ('scheduled', 'in_progress')`)
+    .orderBy(transports.scheduledPickup);
+
+  return results.map((t, i) => ({
+    ...(t as Transport),
+    currentLat: (t as any).currentLat ?? (37.7749 + i * 0.01),
+    currentLng: (t as any).currentLng ?? (-122.4194 + i * 0.01),
+  }));
+}
+
 
   async createTransport(transportData: InsertTransport): Promise<Transport> {
     const [transport] = await db.insert(transports).values(transportData).returning();
@@ -448,16 +468,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== MESSAGE OPERATIONS ==========
+
   async getMessages(allocationId?: string, transportId?: string): Promise<Message[]> {
     let query = db.select().from(messages);
     if (allocationId) {
-      query = query.where(eq(messages.allocationId, allocationId)) as any;
+      query = (query.where(eq(messages.allocationId, allocationId)) as any);
     } else if (transportId) {
-      query = query.where(eq(messages.transportId, transportId)) as any;
+      query = (query.where(eq(messages.transportId, transportId)) as any);
     }
     const messagesList = await query.orderBy(desc(messages.createdAt));
-    return messagesList.map((msg: Message) =>
-      encryptionService.decryptObject(msg, PHI_FIELDS.messages.fields, PHI_FIELDS.messages.deterministicFields)
+    return messagesList.map((msg) =>
+      encryptionService.decryptObject(
+        msg,
+        PHI_FIELDS.messages.fields,
+        PHI_FIELDS.messages.deterministicFields
+      )
     );
   }
 
@@ -481,10 +506,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== CHAIN OF CUSTODY ==========
+
   async getCustodyLogs(organId: string): Promise<CustodyLog[]> {
     const logs = await db.select().from(custodyLogs).where(eq(custodyLogs.organId, organId));
-    return logs.map((log: CustodyLog) =>
-      encryptionService.decryptObject(log, PHI_FIELDS.custodyLogs.fields, PHI_FIELDS.custodyLogs.deterministicFields)
+    return logs.map((log) =>
+      encryptionService.decryptObject(
+        log,
+        PHI_FIELDS.custodyLogs.fields,
+        PHI_FIELDS.custodyLogs.deterministicFields
+      )
     );
   }
 
@@ -503,6 +533,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== METRICS ==========
+
   async getMetrics(period?: string): Promise<Metric[]> {
     if (period) {
       return await db.select().from(metrics).where(eq(metrics.period, period));
@@ -516,6 +547,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ========== AUDIT LOGS ==========
+
   async createAuditLog(logData: InsertAuditLog): Promise<AuditLog> {
     const [log] = await db.insert(auditLogs).values(logData).returning();
     return log;
@@ -536,7 +568,7 @@ export class DatabaseStorage implements IStorage {
     sessionId?: string;
   }): Promise<AuditLog[]> {
     let query = db.select().from(auditLogs);
-    const conditions: any[] = [];
+    const conditions: unknown[] = [];
 
     if (filter?.userId) {
       conditions.push(eq(auditLogs.userId, filter.userId));
@@ -561,9 +593,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
+      query = (query.where(and(...(conditions as any[]))) as any);
     }
-    return await query.orderBy(desc(auditLogs.timestamp));
+    const logs = await query.orderBy(desc(auditLogs.timestamp));
+    return logs;
   }
 
   async getAuthAuditLogs(filter?: {
@@ -574,7 +607,7 @@ export class DatabaseStorage implements IStorage {
     sessionId?: string;
   }): Promise<AuthAuditLog[]> {
     let query = db.select().from(authAuditLogs);
-    const conditions: any[] = [];
+    const conditions: unknown[] = [];
 
     if (filter?.userId) {
       conditions.push(eq(authAuditLogs.userId, filter.userId));
@@ -593,9 +626,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
+      query = (query.where(and(...(conditions as any[]))) as any);
     }
-    return await query.orderBy(desc(authAuditLogs.timestamp));
+    const authLogs = await query.orderBy(desc(authAuditLogs.timestamp));
+    return authLogs;
   }
 }
 

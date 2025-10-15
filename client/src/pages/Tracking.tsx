@@ -2,6 +2,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Plane } from "lucide-react";
+import LiveMap from "@/components/tracking/LiveMap";
 
 type Transport = {
   id: string;
@@ -10,14 +11,24 @@ type Transport = {
   destination: string;
   status: string;
   eta: string;
+  currentLat?: number; // 👈 add this
+  currentLng?: number; // 👈 and this
 };
+
 
 export default function Tracking() {
   const { data: transports = [] } = useQuery({
     queryKey: ["transports"],
     queryFn: async () => {
       const res = await fetch("/api/transports", { credentials: "include" });
-      return res.json();
+      const result = await res.json();
+
+      // Mock currentLat and currentLng if missing
+      return result.map((t: Transport, i: number) => ({
+        ...t,
+        currentLat: t.currentLat ?? (37.7749 + i * 0.01), // Slight offset
+        currentLng: t.currentLng ?? (-122.4194 + i * 0.01),
+      }));
     },
     refetchInterval: 30000,
   });
@@ -25,6 +36,7 @@ export default function Tracking() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Organ Transport Tracking</h1>
+
       <Card>
         <CardHeader>
           <CardTitle>All Active Transports</CardTitle>
@@ -52,6 +64,15 @@ export default function Tracking() {
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Live Map</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LiveMap transports={transports} />
         </CardContent>
       </Card>
     </div>

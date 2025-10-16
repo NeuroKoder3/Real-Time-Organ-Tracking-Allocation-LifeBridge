@@ -6,15 +6,11 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
-import fetch from "node-fetch"; // ✅ used for auto‑seed
+import fetch from "node-fetch";
 
-if (fs.existsSync(".env")) {
-  dotenv.config();
-} else {
-  console.warn("⚠️  .env file not found. Make sure environment variables are set.");
-}
+if (fs.existsSync(".env")) dotenv.config();
+else console.warn("⚠️  .env file not found.");
 
-// Must come after dotenv
 import "./config/env.js";
 
 // ---------------------------------------------------------
@@ -22,18 +18,9 @@ import "./config/env.js";
 // ---------------------------------------------------------
 const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"];
 for (const key of requiredEnv) {
-  if (!process.env[key]) {
-    const msg = `❌ ${key} must be set in your environment`;
-    if (process.env.NODE_ENV === "production") {
-      console.error(msg);
-    } else {
-      throw new Error(msg);
-    }
-  }
+  if (!process.env[key]) throw new Error(`❌ Missing env var: ${key}`);
 }
 
-// ---------------------------------------------------------
-// ✅ Imports AFTER dotenv.config()
 // ---------------------------------------------------------
 import express, {
   type Express,
@@ -50,7 +37,6 @@ import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
 
-// ESM-safe __dirname / __filename
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -60,57 +46,44 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 
 // ---------------------------------------------------------
-// ✅ Allowed Origins
+// ✅ Allowed Origins (production + local)
 // ---------------------------------------------------------
 const allowedOrigins = [
-  "https://lifebridge-opotracking.netlify.app",
   "https://lifebridge.online",
   "https://www.lifebridge.online",
+  "https://api.lifebridge.online",
+  "https://real-time-organ-tracking-allocation.onrender.com",
+  "https://lifebridge-opotracking.netlify.app",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:5000",
-  "https://real-time-organ-tracking-allocation.onrender.com", // ✅ <--- ADD THIS
-  "https://api.lifebridge.online"
 ];
 
 // ---------------------------------------------------------
-// ✅ Log All Origins for Debugging
+// ✅ Global CORS Middleware (handles all routes)
 // ---------------------------------------------------------
 app.use((req, res, next) => {
-  const origin = req.headers.origin || "NO_ORIGIN_HEADER";
-  console.log(`🌐 Incoming request from: ${origin}`);
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Expose-Headers", "X-CSRF-Token");
+
+  // ✅ Immediately answer preflight requests
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
   next();
 });
-
-// ---------------------------------------------------------
-// ✅ CORS Middleware (safe, preflight-friendly, exposes headers)
-// ---------------------------------------------------------
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`❌ CORS blocked origin: ${origin}`);
-      callback(null, false); // deny but don’t throw
-    }
-  },
-  credentials: true,
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Origin",
-    "X-Requested-With",
-    "Content-Type",
-    "Accept",
-    "Authorization",
-    "X-CSRF-Token",
-  ],
-  exposedHeaders: ["X-CSRF-Token"],
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // Handle preflight requests
 
 // ---------------------------------------------------------
 // ✅ Security Middleware
@@ -124,7 +97,7 @@ app.use(
 app.use(cookieParser());
 
 // ---------------------------------------------------------
-// ✅ CSRF protection (cookie-based) with dev route exemptions
+// ✅ CSRF protection (cookie-based)
 // ---------------------------------------------------------
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
@@ -146,10 +119,7 @@ if (process.env.NODE_ENV !== "test") {
       "/_seed-admin",
       "/_debug",
     ];
-
-    if (csrfExempt.includes(req.path)) {
-      return next();
-    }
+    if (csrfExempt.includes(req.path)) return next();
     return csrfMiddleware(req, res, next);
   });
 
@@ -164,13 +134,15 @@ if (process.env.NODE_ENV !== "test") {
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
-// Logging of API requests
+// ---------------------------------------------------------
+// ✅ API Logging
+// ---------------------------------------------------------
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
-    const duration = Date.now() - start;
     if (req.path.startsWith("/api")) {
-      log(`[API] ${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
+      const ms = Date.now() - start;
+      log(`[API] ${req.method} ${req.path} ${res.statusCode} ${ms}ms`);
     }
   });
   next();
@@ -179,18 +151,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ---------------------------------------------------------
 // ✅ Health Checks
 // ---------------------------------------------------------
-app.get("/api/health", (_req, res) => {
-  res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
-});
+app.get("/api/health", (_req, res) =>
+  res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
+);
 app.get("/healthz", (_req, res) => res.send("ok"));
 
 // ---------------------------------------------------------
-// ✅ Register API Routes
+// ✅ Register Routes
 // ---------------------------------------------------------
 await registerRoutes(app);
 
 // ---------------------------------------------------------
-// ✅ Global Error Handler
+// ✅ Error Handler
 // ---------------------------------------------------------
 app.use(errorHandler);
 
@@ -200,16 +172,12 @@ app.use(errorHandler);
 (async () => {
   try {
     const port = parseInt(process.env.PORT || "5000", 10);
-
     if (app.get("env") === "development") {
       const http = await import("http");
       const server = http.createServer(app);
       await setupVite(app, server);
-
       server.listen(port, "0.0.0.0", async () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
-
-        // 🌱 Seed the demo user AFTER server starts
         try {
           const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
             method: "POST",
@@ -228,15 +196,11 @@ app.use(errorHandler);
       });
     } else {
       serveStatic(app);
-      const limiter = rateLimit({
-        windowMs: 15 * 60 * 1000,
-        max: 100,
-      });
+      const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
       app.use(limiter);
-
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ✅ CORS Origins: ${allowedOrigins.join(", ")}`);
+        log(`[Server] ✅ CORS enabled for: ${allowedOrigins.join(", ")}`);
       });
     }
   } catch (error) {

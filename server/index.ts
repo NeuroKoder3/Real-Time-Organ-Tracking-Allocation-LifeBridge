@@ -83,7 +83,7 @@ app.use((req, res, next) => {
 });
 
 // ---------------------------------------------------------
-// ✅ CORS Middleware (safe, no 500 errors on bad origin)
+// ✅ CORS Middleware (safe, preflight-friendly, exposes headers)
 // ---------------------------------------------------------
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -91,7 +91,7 @@ const corsOptions = {
       callback(null, true);
     } else {
       console.warn(`❌ CORS blocked origin: ${origin}`);
-      callback(null, false); // deny, but don’t throw
+      callback(null, false); // deny but don’t throw
     }
   },
   credentials: true,
@@ -104,6 +104,7 @@ const corsOptions = {
     "Authorization",
     "X-CSRF-Token",
   ],
+  exposedHeaders: ["X-CSRF-Token"],
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };

@@ -17,7 +17,6 @@ import { Heart, Plus, Clock, MapPin, Edit, Trash2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import type { Organ } from "@shared/schema";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
@@ -82,7 +81,7 @@ function OrganCard({
           Math.min(
             100,
             ((organ.viabilityHours -
-              (Date.now() - new Date(organ.preservationStartTime).getTime()) / 36e5) /
+              ((Date.now() - new Date(organ.preservationStartTime).getTime()) / 36e5)) /
               organ.viabilityHours) *
               100
           )
@@ -138,7 +137,6 @@ function OrganCard({
 // ---------- main ----------
 export default function Organs() {
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Organ | null>(null);
@@ -167,7 +165,7 @@ export default function Organs() {
   });
 
   const createMutation = useMutation<
-    any, // you can replace `any` with a more specific type if you have one
+    any,
     Error,
     typeof form
   >({
@@ -196,11 +194,12 @@ export default function Organs() {
       setDialogOpen(false);
       resetForm();
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: any) =>
+      toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateMutation = useMutation<
-    any, // again, replace with correct return type if known
+    any,
     Error,
     { id: string } & Partial<typeof form>
   >({
@@ -296,61 +295,73 @@ export default function Organs() {
     <div className="space-y-6">
       <div className="flex justify-between">
         <h1 className="text-3xl font-bold">Organ Inventory</h1>
-        <div className="flex gap-2">
-          <Button onClick={() => navigate("/organs/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Register Organ
-          </Button>
-        </div>
+        {/* Dialog Trigger preserved */}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              onClick={() => {
+                resetForm();
+                setEditing(null);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Register Organ
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{editing ? "Edit Organ" : "Add Organ"}</DialogTitle>
+              <DialogDescription>
+                {editing
+                  ? "Update organ details"
+                  : "Enter details to add a new organ."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              {[
+                ["Organ Type", "organType"],
+                ["Blood Type", "bloodType"],
+                ["Donor ID", "donorId"],
+                ["Current Location", "currentLocation"],
+                ["Viability Hours", "viabilityHours"],
+                ["HLA Markers", "hlaMarkers"],
+                ["Special Requirements", "specialRequirements"],
+              ].map(([label, key]) => (
+                <div key={key}>
+                  <Label>{label}</Label>
+                  <Input
+                    type={key === "viabilityHours" ? "number" : "text"}
+                    value={(form as any)[key]}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        [key]:
+                          key === "viabilityHours"
+                            ? parseInt(e.target.value, 10) || 0
+                            : e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              ))}
+              <Button className="w-full mt-4" onClick={handleSubmit}>
+                {editing ? "Update Organ" : "Add Organ"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {organs.map((organ) => (
-          <OrganCard key={organ.id} organ={organ} onEdit={handleEdit} onDelete={handleDelete} />
+          <OrganCard
+            key={organ.id}
+            organ={organ}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         ))}
       </div>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Organ" : "Add Organ"}</DialogTitle>
-            <DialogDescription>
-              {editing ? "Update organ details" : "Enter details to add a new organ."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {[
-              ["Organ Type", "organType"],
-              ["Blood Type", "bloodType"],
-              ["Donor ID", "donorId"],
-              ["Current Location", "currentLocation"],
-              ["Viability Hours", "viabilityHours"],
-              ["HLA Markers", "hlaMarkers"],
-              ["Special Requirements", "specialRequirements"],
-            ].map(([label, key]) => (
-              <div key={key}>
-                <Label>{label}</Label>
-                <Input
-                  type={key === "viabilityHours" ? "number" : "text"}
-                  value={(form as any)[key]}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      [key]:
-                        key === "viabilityHours"
-                          ? parseInt(e.target.value, 10) || 0
-                          : e.target.value,
-                    })
-                  }
-                />
-              </div>
-            ))}
-            <Button className="w-full mt-4" onClick={handleSubmit}>
-              {editing ? "Update Organ" : "Add Organ"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

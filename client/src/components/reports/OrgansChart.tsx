@@ -1,7 +1,20 @@
 // src/components/reports/OrgansChart.tsx
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
-const data = [
+type OrgansDataPoint = {
+  month: string;
+  transported: number;
+};
+
+const data: OrgansDataPoint[] = [
   { month: "Jan", transported: 28 },
   { month: "Feb", transported: 35 },
   { month: "Mar", transported: 32 },
@@ -12,7 +25,7 @@ const data = [
 export default function OrgansChart() {
   return (
     <div className="h-80">
-      <h2 className="text-lg font-semibold mb-2">Organs Transported (Last 5 Months)</h2>
+      <h2 className="text-lg font-semibold mb-3">Organs Transported (Last 5 Months)</h2>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />

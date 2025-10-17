@@ -14,7 +14,7 @@ if (fs.existsSync(".env")) {
   console.warn("⚠️  .env file not found.");
 }
 
-// Load any additional env logic
+// Load additional env logic
 import "./config/env.js";
 
 /* ---------------------------------------------------------
@@ -52,34 +52,11 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 
 /* ---------------------------------------------------------
-   ✅ Allowed Origins (production + local)
---------------------------------------------------------- */
-const allowedOrigins = [
-  "https://lifebridge.online",
-  "https://www.lifebridge.online",
-  "https://api.lifebridge.online",
-  "https://real-time-organ-tracking-allocation.onrender.com",
-  "https://lifebridge-opotracking.netlify.app",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:5000",
-];
-
-/* ---------------------------------------------------------
-   ✅ CORS Middleware — must run before routes
+   ✅ CORS Setup
 --------------------------------------------------------- */
 app.use(
   cors({
-    origin: (origin: string | undefined, callback) => {
-      // Debug log
-      console.log("[CORS] Origin header:", origin);
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn("[CORS] Blocking origin:", origin);
-        callback(new Error("Not allowed by CORS"), false);
-      }
-    },
+    origin: "https://www.lifebridge.online",
     credentials: true,
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: [
@@ -91,12 +68,8 @@ app.use(
       "X-CSRF-Token",
     ],
     exposedHeaders: ["X-CSRF-Token"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
   })
 );
-
-// Also explicitly handle all OPTIONS for any path
 app.options("*", cors());
 
 /* ---------------------------------------------------------
@@ -111,10 +84,11 @@ app.use(
 app.use(cookieParser());
 
 /* ---------------------------------------------------------
-   ✅ CSRF protection (cookie-based)
+   ✅ CSRF Protection
 --------------------------------------------------------- */
+const isProd = process.env.NODE_ENV === "production";
+
 if (process.env.NODE_ENV !== "test") {
-  const isProd = process.env.NODE_ENV === "production";
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -123,16 +97,18 @@ if (process.env.NODE_ENV !== "test") {
     },
   }) as unknown as RequestHandler;
 
+  const csrfExempt = [
+    "/api/auth/_seed-demo",
+    "/api/auth/_seed-admin",
+    "/api/_seed-demo",
+    "/api/_seed-admin",
+    "/_seed-demo",
+    "/_seed-admin",
+    "/_debug",
+    "/api/csrf-token",
+  ];
+
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const csrfExempt = [
-      "/api/auth/_seed-demo",
-      "/api/auth/_seed-admin",
-      "/api/_seed-demo",
-      "/api/_seed-admin",
-      "/_seed-demo",
-      "/_seed-admin",
-      "/_debug",
-    ];
     if (csrfExempt.includes(req.path)) {
       return next();
     }
@@ -145,13 +121,13 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 /* ---------------------------------------------------------
-   ✅ Core Middleware
+   ✅ Core Body Parsers
 --------------------------------------------------------- */
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
 /* ---------------------------------------------------------
-   ✅ API Logging
+   ✅ Logging Middleware
 --------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
@@ -165,7 +141,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 /* ---------------------------------------------------------
-   ✅ Health Checks
+   ✅ Health / Basic Routes
 --------------------------------------------------------- */
 app.get("/api/health", (_req, res) =>
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
@@ -173,7 +149,7 @@ app.get("/api/health", (_req, res) =>
 app.get("/healthz", (_req, res) => res.send("ok"));
 
 /* ---------------------------------------------------------
-   ✅ Register API Routes (after CORS)
+   ✅ Register Your App Routes
 --------------------------------------------------------- */
 await registerRoutes(app);
 
@@ -183,7 +159,7 @@ await registerRoutes(app);
 app.use(errorHandler);
 
 /* ---------------------------------------------------------
-   ✅ Bootstrapping Server
+   ✅ Server Bootstrap
 --------------------------------------------------------- */
 (async () => {
   try {
@@ -194,22 +170,21 @@ app.use(errorHandler);
       const server = http.createServer(app);
       await setupVite(app, server);
       server.listen(port, "0.0.0.0", async () => {
-        log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
-        // Optionally seed data
+        log(`[Server] 🚀 Dev server at http://localhost:${port}`);
         try {
           const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
             method: "POST",
           });
           const data = (await res.json()) as { message: string };
-          log(`[Server] 🌱 Demo user seeded: ${data.message}`);
+          log(`[Server] 🌱 Demo seeded: ${data.message}`);
 
           const resAdmin = await fetch(`http://localhost:${port}/api/auth/_seed-admin`, {
             method: "POST",
           });
           const adminData = (await resAdmin.json()) as { message: string };
-          log(`[Server] 👑 Admin user seeded: ${adminData.message}`);
+          log(`[Server] 👑 Admin seeded: ${adminData.message}`);
         } catch (err) {
-          console.error("[Server] ❌ Failed to seed users", err);
+          console.error("[Server] ❌ Seeding failed", err);
         }
       });
     } else {
@@ -218,7 +193,7 @@ app.use(errorHandler);
       app.use(limiter);
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
+        log(`[Server] ✅ CORS origin allowed: https://www.lifebridge.online`);
       });
     }
   } catch (error) {

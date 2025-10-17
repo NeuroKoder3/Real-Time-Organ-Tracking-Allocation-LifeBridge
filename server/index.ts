@@ -1,6 +1,7 @@
-// ---------------------------------------------------------
-// ✅ Load environment variables FIRST
-// ---------------------------------------------------------
+// src/index.ts (or your server entry)
+/* ---------------------------------------------------------
+   ✅ Load environment variables FIRST
+--------------------------------------------------------- */
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -8,20 +9,26 @@ import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
 import fetch from "node-fetch";
 
-if (fs.existsSync(".env")) dotenv.config();
-else console.warn("⚠️  .env file not found.");
-
-import "./config/env.js";
-
-// ---------------------------------------------------------
-// ✅ Validate critical environment variables
-// ---------------------------------------------------------
-const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"];
-for (const key of requiredEnv) {
-  if (!process.env[key]) throw new Error(`❌ Missing env var: ${key}`);
+if (fs.existsSync(".env")) {
+  dotenv.config();
+} else {
+  console.warn("⚠️  .env file not found.");
 }
 
-// ---------------------------------------------------------
+// Load any additional env logic
+import "./config/env.js";
+
+/* ---------------------------------------------------------
+   ✅ Validate critical environment variables
+--------------------------------------------------------- */
+const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"];
+for (const key of requiredEnv) {
+  if (!process.env[key]) {
+    throw new Error(`❌ Missing env var: ${key}`);
+  }
+}
+
+/* --------------------------------------------------------- */
 import express, {
   type Express,
   type Request,
@@ -40,14 +47,14 @@ import { log, serveStatic, setupVite } from "./vite.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ---------------------------------------------------------
-// ✅ Create Express App
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Create Express App
+--------------------------------------------------------- */
 const app: Express = express();
 
-// ---------------------------------------------------------
-// ✅ Allowed Origins (production + local)
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Allowed Origins (production + local)
+--------------------------------------------------------- */
 const allowedOrigins = [
   "https://lifebridge.online",
   "https://www.lifebridge.online",
@@ -59,35 +66,43 @@ const allowedOrigins = [
   "http://localhost:5000",
 ];
 
-// ---------------------------------------------------------
-// ✅ Global CORS Middleware (handles all routes)
-// ---------------------------------------------------------
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
-  );
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Expose-Headers", "X-CSRF-Token");
+/* ---------------------------------------------------------
+   ✅ CORS Middleware — must run before routes
+--------------------------------------------------------- */
+app.use(
+  cors({
+    origin: (origin: string | undefined, callback) => {
+      // Debug log
+      console.log("[CORS] Origin header:", origin);
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn("[CORS] Blocking origin:", origin);
+        callback(new Error("Not allowed by CORS"), false);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "X-CSRF-Token",
+    ],
+    exposedHeaders: ["X-CSRF-Token"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  })
+);
 
-  // ✅ Immediately answer preflight requests
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-  next();
-});
+// Also explicitly handle all OPTIONS for any path
+app.options("*", cors());
 
-// ---------------------------------------------------------
-// ✅ Security Middleware
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Security Middleware
+--------------------------------------------------------- */
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -96,9 +111,9 @@ app.use(
 );
 app.use(cookieParser());
 
-// ---------------------------------------------------------
-// ✅ CSRF protection (cookie-based)
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ CSRF protection (cookie-based)
+--------------------------------------------------------- */
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
   const csrfMiddleware = csurf({
@@ -119,7 +134,9 @@ if (process.env.NODE_ENV !== "test") {
       "/_seed-admin",
       "/_debug",
     ];
-    if (csrfExempt.includes(req.path)) return next();
+    if (csrfExempt.includes(req.path)) {
+      return next();
+    }
     return csrfMiddleware(req, res, next);
   });
 
@@ -128,15 +145,15 @@ if (process.env.NODE_ENV !== "test") {
   });
 }
 
-// ---------------------------------------------------------
-// ✅ Core Middleware
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Core Middleware
+--------------------------------------------------------- */
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
-// ---------------------------------------------------------
-// ✅ API Logging
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ API Logging
+--------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -148,36 +165,38 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---------------------------------------------------------
-// ✅ Health Checks
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Health Checks
+--------------------------------------------------------- */
 app.get("/api/health", (_req, res) =>
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
 );
 app.get("/healthz", (_req, res) => res.send("ok"));
 
-// ---------------------------------------------------------
-// ✅ Register Routes
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Register API Routes (after CORS)
+--------------------------------------------------------- */
 await registerRoutes(app);
 
-// ---------------------------------------------------------
-// ✅ Error Handler
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Global Error Handler
+--------------------------------------------------------- */
 app.use(errorHandler);
 
-// ---------------------------------------------------------
-// ✅ Bootstrapping Server
-// ---------------------------------------------------------
+/* ---------------------------------------------------------
+   ✅ Bootstrapping Server
+--------------------------------------------------------- */
 (async () => {
   try {
     const port = parseInt(process.env.PORT || "5000", 10);
+
     if (app.get("env") === "development") {
       const http = await import("http");
       const server = http.createServer(app);
       await setupVite(app, server);
       server.listen(port, "0.0.0.0", async () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
+        // Optionally seed data
         try {
           const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
             method: "POST",
@@ -200,7 +219,7 @@ app.use(errorHandler);
       app.use(limiter);
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ✅ CORS enabled for: ${allowedOrigins.join(", ")}`);
+        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
       });
     }
   } catch (error) {

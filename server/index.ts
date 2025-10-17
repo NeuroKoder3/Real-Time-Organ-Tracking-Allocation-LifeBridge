@@ -1,6 +1,3 @@
-/* ---------------------------------------------------------
-   ✅ Load environment variables FIRST
---------------------------------------------------------- */
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -16,9 +13,6 @@ if (fs.existsSync(".env")) {
 
 import "./config/env.js";
 
-/* ---------------------------------------------------------
-   ✅ Validate critical environment variables
---------------------------------------------------------- */
 const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET"];
 for (const key of requiredEnv) {
   if (!process.env[key]) {
@@ -26,7 +20,6 @@ for (const key of requiredEnv) {
   }
 }
 
-/* --------------------------------------------------------- */
 import express, {
   type Express,
   type Request,
@@ -35,6 +28,7 @@ import express, {
   type RequestHandler,
 } from "express";
 import helmet from "helmet";
+import cors from "cors";
 import csurf from "csurf";
 import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
@@ -44,45 +38,60 @@ import { log, serveStatic, setupVite } from "./vite.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* ---------------------------------------------------------
-   ✅ Create Express App
---------------------------------------------------------- */
 const app: Express = express();
 
-/* ---------------------------------------------------------
-   ⚠️ TEMPORARY: Permissive CORS (for debugging only)
---------------------------------------------------------- */
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // allow everything temporarily
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
-  );
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-  next();
-});
+const allowedOrigins = [
+  "https://lifebridge.online",
+  "https://www.lifebridge.online",
+  "https://api.lifebridge.online",
+  "https://real-time-organ-tracking-allocation.onrender.com",
+  "https://lifebridge-opotracking.netlify.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5000",
+];
 
-/* ---------------------------------------------------------
-   ✅ Security Middleware
---------------------------------------------------------- */
+app.use(
+  cors({
+    origin: (origin: string | undefined, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.warn("[CORS] Blocking origin:", origin);
+        return callback(new Error("Not allowed by CORS"), false);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "X-CSRF-Token",
+    ],
+    exposedHeaders: ["X-CSRF-Token"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+  })
+);
+
+// Handle preflight
+app.options("*", cors());
+
+// Security
 app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
+
+// 🔑 Parse cookies BEFORE csrf
 app.use(cookieParser());
 
-/* ---------------------------------------------------------
-   ✅ CSRF protection (cookie-based)
---------------------------------------------------------- */
+// 🔐 CSRF Protection
 if (process.env.NODE_ENV !== "test") {
   const isProd = process.env.NODE_ENV === "production";
   const csrfMiddleware = csurf({
@@ -101,7 +110,7 @@ if (process.env.NODE_ENV !== "test") {
     "/_seed-demo",
     "/_seed-admin",
     "/_debug",
-    "/api/csrf-token",
+    "/api/csrf-token", // ✅ CSRF token route must be exempted
   ];
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -111,20 +120,22 @@ if (process.env.NODE_ENV !== "test") {
     return csrfMiddleware(req, res, next);
   });
 
+  // ✅ Updated /api/csrf-token route with error handling
   app.get("/api/csrf-token", (req: Request, res: Response) => {
-    res.json({ csrfToken: (req as any).csrfToken?.() });
+    const token = (req as any).csrfToken?.();
+    if (!token) {
+      console.error("[CSRF] Failed to generate token");
+      return res.status(500).json({ error: "Failed to generate CSRF token" });
+    }
+    res.status(200).json({ csrfToken: token });
   });
 }
 
-/* ---------------------------------------------------------
-   ✅ Core Middleware
---------------------------------------------------------- */
+// Core Middleware
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
-/* ---------------------------------------------------------
-   ✅ API Logging
---------------------------------------------------------- */
+// API Logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
@@ -136,27 +147,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-/* ---------------------------------------------------------
-   ✅ Health Checks
---------------------------------------------------------- */
+// Health checks
 app.get("/api/health", (_req, res) =>
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
 );
 app.get("/healthz", (_req, res) => res.send("ok"));
 
-/* ---------------------------------------------------------
-   ✅ Register API Routes (after CORS)
---------------------------------------------------------- */
+// Register routes
 await registerRoutes(app);
 
-/* ---------------------------------------------------------
-   ✅ Global Error Handler
---------------------------------------------------------- */
+// Global error handler
 app.use(errorHandler);
 
-/* ---------------------------------------------------------
-   ✅ Bootstrapping Server
---------------------------------------------------------- */
+// Boot server
 (async () => {
   try {
     const port = parseInt(process.env.PORT || "5000", 10);
@@ -189,7 +192,7 @@ app.use(errorHandler);
       app.use(limiter);
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ⚠️ CORS is temporarily wide open for debugging`);
+        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
       });
     }
   } catch (error) {

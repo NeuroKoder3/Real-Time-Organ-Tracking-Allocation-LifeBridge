@@ -1,7 +1,3 @@
-/**
- * 🌐 API Utility for LifeBridge
- */
-
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5000/api";
 
@@ -13,8 +9,10 @@ async function safeJsonParse<T>(res: Response): Promise<T | null> {
   try {
     const contentType = res.headers.get("Content-Type") || "";
     if (!contentType.includes("application/json")) return null;
+
     const txt = await res.text();
     if (!txt.trim()) return null;
+
     return JSON.parse(txt) as T;
   } catch (err) {
     console.warn("⚠️ Failed to parse JSON:", err);
@@ -46,7 +44,7 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include",
+    credentials: "include", // ✅ Required for CSRF cookie
   };
 
   const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;

@@ -25,10 +25,7 @@ export function useAuth() {
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
-        const userData = await api<User | null>("/auth/user", {
-          credentials: "include", // ✅ make sure cookies are sent
-          mode: "cors", // ✅ make sure browser performs CORS request
-        });
+        const userData = await api<User | null>("/auth/user");
         return userData ?? null;
       } catch (err) {
         console.warn("[useAuth] fetch user failed:", err);
@@ -40,20 +37,14 @@ export function useAuth() {
 
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      const csrfRes = await api<CsrfResponse>("/csrf-token", {
-        credentials: "include",
-        mode: "cors",
-      });
+      const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
-
       if (!csrfToken?.trim()) {
         throw new Error("CSRF token missing");
       }
 
       const userData = await api<User>("/auth/login", {
         method: "POST",
-        credentials: "include",
-        mode: "cors",
         headers: {
           "Content-Type": "application/json",
           "X-CSRF-Token": csrfToken,
@@ -74,17 +65,11 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     try {
-      const csrfRes = await api<CsrfResponse>("/csrf-token", {
-        credentials: "include",
-        mode: "cors",
-      });
+      const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
-
       if (csrfToken) {
         await api("/auth/logout", {
           method: "POST",
-          credentials: "include",
-          mode: "cors",
           headers: {
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfToken,

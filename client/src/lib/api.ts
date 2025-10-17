@@ -1,8 +1,3 @@
-/**
- * 🌐 API Utility for LifeBridge
- * Handles authentication, JWT headers, and consistent error reporting.
- */
-
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5000/api";
 
@@ -49,8 +44,7 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include", // ✅ ensures cookies are sent
-    mode: "cors",            // ✅ ensures CORS preflight works properly
+    credentials: "include",
   };
 
   const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;

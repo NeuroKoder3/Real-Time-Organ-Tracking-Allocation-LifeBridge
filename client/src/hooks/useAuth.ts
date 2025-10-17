@@ -25,7 +25,10 @@ export function useAuth() {
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
-        const userData = await api<User | null>("/auth/user");
+        const userData = await api<User | null>("/auth/user", {
+          credentials: "include", // ✅ make sure cookies are sent
+          mode: "cors", // ✅ make sure browser performs CORS request
+        });
         return userData ?? null;
       } catch (err) {
         console.warn("[useAuth] fetch user failed:", err);
@@ -37,15 +40,20 @@ export function useAuth() {
 
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      // Get CSRF token first
-      const csrfRes = await api<CsrfResponse>("/csrf-token");
+      const csrfRes = await api<CsrfResponse>("/csrf-token", {
+        credentials: "include",
+        mode: "cors",
+      });
       const csrfToken = csrfRes?.csrfToken;
+
       if (!csrfToken?.trim()) {
         throw new Error("CSRF token missing");
       }
 
       const userData = await api<User>("/auth/login", {
         method: "POST",
+        credentials: "include",
+        mode: "cors",
         headers: {
           "Content-Type": "application/json",
           "X-CSRF-Token": csrfToken,
@@ -66,11 +74,17 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     try {
-      const csrfRes = await api<CsrfResponse>("/csrf-token");
+      const csrfRes = await api<CsrfResponse>("/csrf-token", {
+        credentials: "include",
+        mode: "cors",
+      });
       const csrfToken = csrfRes?.csrfToken;
+
       if (csrfToken) {
         await api("/auth/logout", {
           method: "POST",
+          credentials: "include",
+          mode: "cors",
           headers: {
             "Content-Type": "application/json",
             "X-CSRF-Token": csrfToken,
@@ -84,7 +98,6 @@ export function useAuth() {
     localStorage.removeItem(STORAGE_KEY);
     queryClient.setQueryData(AUTH_QUERY_KEY, null);
 
-    // Instead of unconditional redirect, you can check current path
     if (window.location.pathname !== "/") {
       window.location.assign("/");
     }

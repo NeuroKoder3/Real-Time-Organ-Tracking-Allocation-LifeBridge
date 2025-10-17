@@ -49,7 +49,8 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include",
+    credentials: "include", // ✅ ensures cookies are sent
+    mode: "cors",            // ✅ ensures CORS preflight works properly
   };
 
   const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
@@ -68,7 +69,6 @@ export async function api<T = unknown>(
 
   if (response.status === 401) {
     console.warn("[API] 401 Unauthorized");
-    // Do not auto-redirect here. Let useAuth handle that.
     throw new Error("Unauthorized");
   }
 

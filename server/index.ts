@@ -14,6 +14,7 @@ if (fs.existsSync(".env")) {
   console.warn("⚠️  .env file not found.");
 }
 
+// Load any additional env logic
 import "./config/env.js";
 
 /* ---------------------------------------------------------
@@ -72,8 +73,12 @@ app.use(
     origin: (origin: string | undefined, callback) => {
       console.log("[CORS] Origin header:", origin);
 
-      // ✅ Allow undefined origins (e.g. curl, SSR) and known origins
-      if (!origin || allowedOrigins.includes(origin)) {
+      // ✅ Allow undefined or local origin (e.g., server-side, curl, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
         console.warn("[CORS] Blocking origin:", origin);
@@ -96,7 +101,7 @@ app.use(
   })
 );
 
-// Explicitly handle OPTIONS requests for all routes
+// Explicitly allow OPTIONS preflight on all routes
 app.options("*", cors());
 
 /* ---------------------------------------------------------
@@ -113,9 +118,8 @@ app.use(cookieParser());
 /* ---------------------------------------------------------
    ✅ CSRF protection (cookie-based)
 --------------------------------------------------------- */
-const isProd = process.env.NODE_ENV === "production";
-
 if (process.env.NODE_ENV !== "test") {
+  const isProd = process.env.NODE_ENV === "production";
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -124,29 +128,26 @@ if (process.env.NODE_ENV !== "test") {
     },
   }) as unknown as RequestHandler;
 
-  const csrfExempt = [
-    "/api/auth/_seed-demo",
-    "/api/auth/_seed-admin",
-    "/api/_seed-demo",
-    "/api/_seed-admin",
-    "/_seed-demo",
-    "/_seed-admin",
-    "/_debug",
-    "/api/csrf-token", // ✅ CSRF token route must be exempt to allow access
-  ];
-
   app.use((req: Request, res: Response, next: NextFunction) => {
+    const csrfExempt = [
+      "/api/auth/_seed-demo",
+      "/api/auth/_seed-admin",
+      "/api/_seed-demo",
+      "/api/_seed-admin",
+      "/_seed-demo",
+      "/_seed-admin",
+      "/_debug",
+    ];
     if (csrfExempt.includes(req.path)) {
       return next();
     }
     return csrfMiddleware(req, res, next);
   });
-}
 
-// ✅ Always expose this route for frontend to get CSRF token
-app.get("/api/csrf-token", (req: Request, res: Response) => {
-  res.json({ csrfToken: (req as any).csrfToken?.() });
-});
+  app.get("/api/csrf-token", (req: Request, res: Response) => {
+    res.json({ csrfToken: (req as any).csrfToken?.() });
+  });
+}
 
 /* ---------------------------------------------------------
    ✅ Core Middleware
@@ -177,7 +178,7 @@ app.get("/api/health", (_req, res) =>
 app.get("/healthz", (_req, res) => res.send("ok"));
 
 /* ---------------------------------------------------------
-   ✅ Register API Routes (after CORS + CSRF)
+   ✅ Register API Routes (after CORS)
 --------------------------------------------------------- */
 await registerRoutes(app);
 

@@ -2,6 +2,9 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import OrgansChart from "@/components/reports/OrgansChart";
 import RecipientsChart from "@/components/reports/RecipientsChart";
+import TransportsChart from "@/components/reports/TransportsChart";
+import AllocationSuccessRate from "@/components/reports/AllocationSuccessRate";
+import AuditLogsTable from "@/components/reports/AuditLogsTable";
 import ExportCSVButton from "@/components/reports/ExportCSVButton";
 import ExportPDFButton from "@/components/reports/ExportPDFButton";
 
@@ -17,10 +20,27 @@ export default function Reports() {
         <CardContent className="space-y-6">
           <OrgansChart />
           <RecipientsChart />
-          <div className="flex gap-4">
-            <ExportCSVButton />
-            <ExportPDFButton />
-          </div>
+          <TransportsChart />
+          <AllocationSuccessRate />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Audit Logs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AuditLogsTable />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Export Reports</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-4">
+          <ExportCSVButton />
+          <ExportPDFButton />
         </CardContent>
       </Card>
     </div>

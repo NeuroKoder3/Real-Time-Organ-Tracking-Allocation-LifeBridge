@@ -66,43 +66,44 @@ const allowedOrigins = [
 ];
 
 /* ---------------------------------------------------------
-   ✅ CORS Middleware — must run before routes
+   ✅ GLOBAL CORS FIX (Always sets headers)
+--------------------------------------------------------- */
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+    );
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+    );
+  }
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+/* ---------------------------------------------------------
+   ✅ Express CORS Middleware — Reinforced
 --------------------------------------------------------- */
 app.use(
   cors({
-    origin: (origin: string | undefined, callback) => {
-      console.log("[CORS] Origin header:", origin);
-
-      // ✅ Allow undefined or local origin (e.g., server-side, curl, etc.)
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
       } else {
-        console.warn("[CORS] Blocking origin:", origin);
-        return callback(new Error("Not allowed by CORS"), false);
+        console.warn("[CORS] Blocked origin:", origin);
+        callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
-    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "Authorization",
-      "X-CSRF-Token",
-    ],
-    exposedHeaders: ["X-CSRF-Token"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
   })
 );
-
-// Explicitly allow OPTIONS preflight on all routes
-app.options("*", cors());
 
 /* ---------------------------------------------------------
    ✅ Security Middleware
@@ -118,8 +119,9 @@ app.use(cookieParser());
 /* ---------------------------------------------------------
    ✅ CSRF protection (cookie-based)
 --------------------------------------------------------- */
+const isProd = process.env.NODE_ENV === "production";
+
 if (process.env.NODE_ENV !== "test") {
-  const isProd = process.env.NODE_ENV === "production";
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -128,26 +130,29 @@ if (process.env.NODE_ENV !== "test") {
     },
   }) as unknown as RequestHandler;
 
+  const csrfExempt = [
+    "/api/auth/_seed-demo",
+    "/api/auth/_seed-admin",
+    "/api/_seed-demo",
+    "/api/_seed-admin",
+    "/_seed-demo",
+    "/_seed-admin",
+    "/_debug",
+    "/api/csrf-token",
+  ];
+
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const csrfExempt = [
-      "/api/auth/_seed-demo",
-      "/api/auth/_seed-admin",
-      "/api/_seed-demo",
-      "/api/_seed-admin",
-      "/_seed-demo",
-      "/_seed-admin",
-      "/_debug",
-    ];
     if (csrfExempt.includes(req.path)) {
       return next();
     }
     return csrfMiddleware(req, res, next);
   });
-
-  app.get("/api/csrf-token", (req: Request, res: Response) => {
-    res.json({ csrfToken: (req as any).csrfToken?.() });
-  });
 }
+
+// ✅ Always provide a CSRF token endpoint
+app.get("/api/csrf-token", (req: Request, res: Response) => {
+  res.json({ csrfToken: (req as any).csrfToken?.() });
+});
 
 /* ---------------------------------------------------------
    ✅ Core Middleware

@@ -14,7 +14,6 @@ if (fs.existsSync(".env")) {
   console.warn("⚠️  .env file not found.");
 }
 
-// Load additional env logic
 import "./config/env.js";
 
 /* ---------------------------------------------------------
@@ -36,7 +35,6 @@ import express, {
   type RequestHandler,
 } from "express";
 import helmet from "helmet";
-import cors from "cors";
 import csurf from "csurf";
 import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
@@ -52,25 +50,24 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 
 /* ---------------------------------------------------------
-   ✅ CORS Setup
+   ⚠️ TEMPORARY: Permissive CORS (for debugging only)
 --------------------------------------------------------- */
-app.use(
-  cors({
-    origin: "https://www.lifebridge.online",
-    credentials: true,
-    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "Authorization",
-      "X-CSRF-Token",
-    ],
-    exposedHeaders: ["X-CSRF-Token"],
-  })
-);
-app.options("*", cors());
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*"); // allow everything temporarily
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+  );
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
 /* ---------------------------------------------------------
    ✅ Security Middleware
@@ -84,11 +81,10 @@ app.use(
 app.use(cookieParser());
 
 /* ---------------------------------------------------------
-   ✅ CSRF Protection
+   ✅ CSRF protection (cookie-based)
 --------------------------------------------------------- */
-const isProd = process.env.NODE_ENV === "production";
-
 if (process.env.NODE_ENV !== "test") {
+  const isProd = process.env.NODE_ENV === "production";
   const csrfMiddleware = csurf({
     cookie: {
       httpOnly: true,
@@ -121,13 +117,13 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 /* ---------------------------------------------------------
-   ✅ Core Body Parsers
+   ✅ Core Middleware
 --------------------------------------------------------- */
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 
 /* ---------------------------------------------------------
-   ✅ Logging Middleware
+   ✅ API Logging
 --------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
@@ -141,7 +137,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 /* ---------------------------------------------------------
-   ✅ Health / Basic Routes
+   ✅ Health Checks
 --------------------------------------------------------- */
 app.get("/api/health", (_req, res) =>
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
@@ -149,7 +145,7 @@ app.get("/api/health", (_req, res) =>
 app.get("/healthz", (_req, res) => res.send("ok"));
 
 /* ---------------------------------------------------------
-   ✅ Register Your App Routes
+   ✅ Register API Routes (after CORS)
 --------------------------------------------------------- */
 await registerRoutes(app);
 
@@ -159,7 +155,7 @@ await registerRoutes(app);
 app.use(errorHandler);
 
 /* ---------------------------------------------------------
-   ✅ Server Bootstrap
+   ✅ Bootstrapping Server
 --------------------------------------------------------- */
 (async () => {
   try {
@@ -170,21 +166,21 @@ app.use(errorHandler);
       const server = http.createServer(app);
       await setupVite(app, server);
       server.listen(port, "0.0.0.0", async () => {
-        log(`[Server] 🚀 Dev server at http://localhost:${port}`);
+        log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
         try {
           const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
             method: "POST",
           });
           const data = (await res.json()) as { message: string };
-          log(`[Server] 🌱 Demo seeded: ${data.message}`);
+          log(`[Server] 🌱 Demo user seeded: ${data.message}`);
 
           const resAdmin = await fetch(`http://localhost:${port}/api/auth/_seed-admin`, {
             method: "POST",
           });
           const adminData = (await resAdmin.json()) as { message: string };
-          log(`[Server] 👑 Admin seeded: ${adminData.message}`);
+          log(`[Server] 👑 Admin user seeded: ${adminData.message}`);
         } catch (err) {
-          console.error("[Server] ❌ Seeding failed", err);
+          console.error("[Server] ❌ Failed to seed users", err);
         }
       });
     } else {
@@ -193,7 +189,7 @@ app.use(errorHandler);
       app.use(limiter);
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ✅ CORS origin allowed: https://www.lifebridge.online`);
+        log(`[Server] ⚠️ CORS is temporarily wide open for debugging`);
       });
     }
   } catch (error) {

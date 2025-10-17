@@ -1,4 +1,3 @@
-// src/index.ts (or your server entry)
 /* ---------------------------------------------------------
    ✅ Load environment variables FIRST
 --------------------------------------------------------- */
@@ -72,13 +71,18 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin: string | undefined, callback) => {
-      // Debug log
       console.log("[CORS] Origin header:", origin);
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
+
+      // ✅ Allow undefined or local origin (e.g., server-side, curl, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       } else {
         console.warn("[CORS] Blocking origin:", origin);
-        callback(new Error("Not allowed by CORS"), false);
+        return callback(new Error("Not allowed by CORS"), false);
       }
     },
     credentials: true,
@@ -97,7 +101,7 @@ app.use(
   })
 );
 
-// Also explicitly handle all OPTIONS for any path
+// Explicitly allow OPTIONS preflight on all routes
 app.options("*", cors());
 
 /* ---------------------------------------------------------
@@ -196,7 +200,6 @@ app.use(errorHandler);
       await setupVite(app, server);
       server.listen(port, "0.0.0.0", async () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
-        // Optionally seed data
         try {
           const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
             method: "POST",

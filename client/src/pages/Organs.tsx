@@ -21,7 +21,6 @@ import type { Organ } from "@shared/schema";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
 
-// ---------- helpers ----------
 async function getCsrfToken() {
   try {
     const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
@@ -36,7 +35,6 @@ function getAuthToken() {
   return localStorage.getItem("token");
 }
 
-// ---------- Card ----------
 function OrganCard({
   organ,
   onEdit,
@@ -114,6 +112,20 @@ function OrganCard({
             <p className="text-muted-foreground">Status</p>
             <Badge variant="outline">{organ.status}</Badge>
           </div>
+          <div>
+            <p className="text-muted-foreground">Patient MRN</p>
+            <p>{(organ as any).patientMrn ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">DOB / Gender</p>
+            <p>
+              {(organ as any).patientDob ?? "—"} / {(organ as any).patientGender ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Hospital</p>
+            <p>{(organ as any).hospitalName ?? "—"}</p>
+          </div>
           <div className="col-span-2 flex items-center gap-1">
             <MapPin className="h-3 w-3 text-muted-foreground" />
             <span>{organ.currentLocation ?? "Unknown"}</span>
@@ -134,13 +146,13 @@ function OrganCard({
   );
 }
 
-// ---------- main ----------
+// ---------- MAIN ----------
 export default function Organs() {
   const { toast } = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Organ | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<any>({
     organType: "",
     bloodType: "",
     donorId: "",
@@ -148,6 +160,10 @@ export default function Organs() {
     viabilityHours: 24,
     hlaMarkers: "",
     specialRequirements: "",
+    patientMrn: "",
+    patientDob: "",
+    patientGender: "",
+    hospitalName: "",
     status: "available",
   });
 
@@ -164,12 +180,8 @@ export default function Organs() {
     },
   });
 
-  const createMutation = useMutation<
-    any,
-    Error,
-    typeof form
-  >({
-    mutationFn: async (data) => {
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
       const token = getAuthToken();
       const csrf = await getCsrfToken();
       const res = await fetch(`${API_BASE}/api/organs`, {
@@ -198,12 +210,8 @@ export default function Organs() {
       toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const updateMutation = useMutation<
-    any,
-    Error,
-    { id: string } & Partial<typeof form>
-  >({
-    mutationFn: async ({ id, ...data }) => {
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & Partial<typeof form>) => {
       const token = getAuthToken();
       const csrf = await getCsrfToken();
       const res = await fetch(`${API_BASE}/api/organs/${id}`, {
@@ -228,8 +236,8 @@ export default function Organs() {
     },
   });
 
-  const deleteMutation = useMutation<any, Error, string>({
-    mutationFn: async (id) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const token = getAuthToken();
       const csrf = await getCsrfToken();
       const res = await fetch(`${API_BASE}/api/organs/${id}`, {
@@ -258,13 +266,17 @@ export default function Organs() {
       viabilityHours: 24,
       hlaMarkers: "",
       specialRequirements: "",
+      patientMrn: "",
+      patientDob: "",
+      patientGender: "",
+      hospitalName: "",
       status: "available",
     });
   }
 
   function handleSubmit() {
     if (editing) {
-      updateMutation.mutate({ id: editing.id, ...(form as any) });
+      updateMutation.mutate({ id: editing.id, ...form });
     } else {
       createMutation.mutate(form);
     }
@@ -279,6 +291,10 @@ export default function Organs() {
       viabilityHours: organ.viabilityHours,
       hlaMarkers: (organ as any).hlaMarkers ?? "",
       specialRequirements: (organ as any).specialRequirements ?? "",
+      patientMrn: (organ as any).patientMrn ?? "",
+      patientDob: (organ as any).patientDob ?? "",
+      patientGender: (organ as any).patientGender ?? "",
+      hospitalName: (organ as any).hospitalName ?? "",
       status: organ.status,
     });
     setEditing(organ);
@@ -295,15 +311,9 @@ export default function Organs() {
     <div className="space-y-6">
       <div className="flex justify-between">
         <h1 className="text-3xl font-bold">Organ Inventory</h1>
-        {/* Dialog Trigger preserved */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              onClick={() => {
-                resetForm();
-                setEditing(null);
-              }}
-            >
+            <Button onClick={() => { resetForm(); setEditing(null); }}>
               <Plus className="h-4 w-4 mr-2" />
               Register Organ
             </Button>
@@ -312,9 +322,7 @@ export default function Organs() {
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Organ" : "Add Organ"}</DialogTitle>
               <DialogDescription>
-                {editing
-                  ? "Update organ details"
-                  : "Enter details to add a new organ."}
+                {editing ? "Update organ details" : "Enter details to add a new organ."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
@@ -326,20 +334,18 @@ export default function Organs() {
                 ["Viability Hours", "viabilityHours"],
                 ["HLA Markers", "hlaMarkers"],
                 ["Special Requirements", "specialRequirements"],
+                ["Patient MRN", "patientMrn"],
+                ["Patient DOB", "patientDob"],
+                ["Patient Gender", "patientGender"],
+                ["Hospital Name", "hospitalName"],
               ].map(([label, key]) => (
                 <div key={key}>
                   <Label>{label}</Label>
                   <Input
-                    type={key === "viabilityHours" ? "number" : "text"}
-                    value={(form as any)[key]}
+                    type={key === "viabilityHours" ? "number" : key === "patientDob" ? "date" : "text"}
+                    value={form[key]}
                     onChange={(e) =>
-                      setForm({
-                        ...form,
-                        [key]:
-                          key === "viabilityHours"
-                            ? parseInt(e.target.value, 10) || 0
-                            : e.target.value,
-                      })
+                      setForm({ ...form, [key]: key === "viabilityHours" ? parseInt(e.target.value, 10) || 0 : e.target.value })
                     }
                   />
                 </div>

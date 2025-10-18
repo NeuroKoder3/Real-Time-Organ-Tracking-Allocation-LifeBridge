@@ -14,7 +14,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Organs from "@/pages/Organs";
-import NewOrgan from "@/pages/NewOrgan"; // ✅ NEW IMPORT
+import NewOrgan from "@/pages/NewOrgan";
 import Recipients from "@/pages/Recipients";
 import Allocations from "@/pages/Allocations";
 import Transport from "@/pages/Transport";
@@ -22,6 +22,7 @@ import TrackingPage from "@/pages/Tracking";
 import Messages from "@/pages/Messages";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
+import Labs from "@/pages/Labs"; // ✅ NEW IMPORT
 
 type ApiOptions = RequestInit & { query?: Record<string, string | number | boolean> };
 
@@ -164,7 +165,7 @@ function Router() {
         <Route path="/*" element={<AuthenticatedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="organs" element={<Organs />} />
-          <Route path="organs/new" element={<NewOrgan />} /> {/* ✅ Added this line */}
+          <Route path="organs/new" element={<NewOrgan />} />
           <Route path="recipients" element={<Recipients />} />
           <Route path="allocations" element={<Allocations />} />
           <Route path="transport" element={<Transport />} />
@@ -172,6 +173,7 @@ function Router() {
           <Route path="messages" element={<Messages />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="labs" element={<Labs />} /> {/* ✅ Labs route added */}
           <Route path="*" element={<NotFound />} />
         </Route>
       )}

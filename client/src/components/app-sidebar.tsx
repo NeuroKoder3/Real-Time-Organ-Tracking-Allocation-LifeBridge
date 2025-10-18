@@ -1,4 +1,15 @@
-import { Home, Heart, Users, Plane, MessageSquare, BarChart3, Settings, MapPin, Clock } from "lucide-react";
+import {
+  Home,
+  Heart,
+  Users,
+  Plane,
+  MessageSquare,
+  BarChart3,
+  Settings,
+  MapPin,
+  Clock,
+  TestTube, // ✅ New icon for Labs
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -52,6 +63,11 @@ const items = [
     title: "Reports",
     url: "/reports",
     icon: BarChart3,
+  },
+  {
+    title: "Labs", // ✅ New Labs tab
+    url: "/labs",
+    icon: TestTube,
   },
   {
     title: "Settings",

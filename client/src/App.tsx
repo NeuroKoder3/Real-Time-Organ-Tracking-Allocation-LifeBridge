@@ -14,11 +14,11 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Organs from "@/pages/Organs";
+import NewOrgan from "@/pages/NewOrgan"; // ✅ NEW IMPORT
 import Recipients from "@/pages/Recipients";
 import Allocations from "@/pages/Allocations";
 import Transport from "@/pages/Transport";
-import TrackingPage from "@/pages/Tracking"; // ✅ Correctly imported
-
+import TrackingPage from "@/pages/Tracking";
 import Messages from "@/pages/Messages";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
@@ -58,7 +58,9 @@ function createApiFetch(baseUrl: string) {
 
     const headers: Record<string, string> = {
       Accept: "application/json",
-      ...(fetchOpts.body && !(fetchOpts.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
+      ...(fetchOpts.body && !(fetchOpts.body instanceof FormData)
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...(fetchOpts.headers ? (fetchOpts.headers as Record<string, string>) : {}),
     };
 
@@ -162,10 +164,11 @@ function Router() {
         <Route path="/*" element={<AuthenticatedLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="organs" element={<Organs />} />
+          <Route path="organs/new" element={<NewOrgan />} /> {/* ✅ Added this line */}
           <Route path="recipients" element={<Recipients />} />
           <Route path="allocations" element={<Allocations />} />
           <Route path="transport" element={<Transport />} />
-          <Route path="tracking" element={<TrackingPage />} /> {/* ✅ Correct component */}
+          <Route path="tracking" element={<TrackingPage />} />
           <Route path="messages" element={<Messages />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />

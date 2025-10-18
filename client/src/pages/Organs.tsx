@@ -145,13 +145,11 @@ function OrganCard({
     </Card>
   );
 }
-
-// ---------- MAIN ----------
 export default function Organs() {
   const { toast } = useToast();
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Organ | null>(null);
+
   const [form, setForm] = useState<any>({
     organType: "",
     bloodType: "",
@@ -367,6 +365,42 @@ export default function Organs() {
             onDelete={handleDelete}
           />
         ))}
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold mb-4">Registered Organs Table</h2>
+        <div className="overflow-auto border rounded">
+          <table className="min-w-full text-sm">
+            <thead className="bg-muted text-left">
+              <tr>
+                <th className="p-2">Organ</th>
+                <th className="p-2">Blood</th>
+                <th className="p-2">Donor ID</th>
+                <th className="p-2">HLA</th>
+                <th className="p-2">MRN</th>
+                <th className="p-2">DOB</th>
+                <th className="p-2">Gender</th>
+                <th className="p-2">Hospital</th>
+                <th className="p-2">Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {organs.map((o) => (
+                <tr key={o.id} className="border-t">
+                  <td className="p-2">{o.organType}</td>
+                  <td className="p-2">{o.bloodType}</td>
+                  <td className="p-2">{o.donorId}</td>
+                  <td className="p-2">{(o as any).hlaMarkers}</td>
+                  <td className="p-2">{(o as any).patientMrn}</td>
+                  <td className="p-2">{(o as any).patientDob}</td>
+                  <td className="p-2">{(o as any).patientGender}</td>
+                  <td className="p-2">{(o as any).hospitalName}</td>
+                  <td className="p-2">{o.currentLocation}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

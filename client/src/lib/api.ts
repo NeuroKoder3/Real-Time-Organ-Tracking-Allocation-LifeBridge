@@ -1,5 +1,5 @@
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5000/api";
+  import.meta.env.VITE_API_BASE_URL?.trim() || "https://api.lifebridge.online/api";
 
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);

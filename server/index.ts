@@ -28,12 +28,14 @@ import express, {
   type RequestHandler,
 } from "express";
 import helmet from "helmet";
-import cors from "cors";
 import csurf from "csurf";
 import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
+
+// ✅ Import centralized CORS middleware
+import { corsMiddleware } from "./middleware/cors.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,44 +44,10 @@ const app: Express = express();
 const isProd = process.env.NODE_ENV === "production";
 
 /* ---------------------------------------------------------
-   ✅ Allowed Origins
---------------------------------------------------------- */
-const allowedOrigins = [
-  "https://lifebridge.online",
-  "https://www.lifebridge.online",
-  "https://api.lifebridge.online",
-  "https://real-time-organ-tracking-allocation.onrender.com",
-  "https://lifebridge-opotracking.netlify.app",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:5000",
-];
-
-/* ---------------------------------------------------------
    ✅ CORS (must be first)
 --------------------------------------------------------- */
-app.use(
-  cors({
-    origin: (origin: string | undefined, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      console.warn("[CORS] Blocking origin:", origin);
-      return callback(new Error("Not allowed by CORS"), false);
-    },
-    credentials: true,
-    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "Authorization",
-      "X-CSRF-Token",
-    ],
-    exposedHeaders: ["X-CSRF-Token"],
-    optionsSuccessStatus: 204,
-  })
-);
-app.options("*", cors());
+app.use(corsMiddleware);
+app.options("*", corsMiddleware);
 
 /* ---------------------------------------------------------
    ✅ Security Middleware
@@ -120,7 +88,6 @@ if (process.env.NODE_ENV !== "test") {
     "/_debug",
   ];
 
-  // Apply csurf middleware BEFORE defining routes
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (csrfExempt.includes(req.path)) return next();
     return csrfMiddleware(req, res, next);
@@ -199,7 +166,6 @@ app.use(errorHandler);
       app.use(limiter);
       app.listen(port, "0.0.0.0", () => {
         log(`[Server] 🌐 Running on port ${port}`);
-        log(`[Server] ✅ Allowed Origins: ${allowedOrigins.join(", ")}`);
       });
     }
   } catch (error) {

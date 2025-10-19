@@ -13,7 +13,13 @@ if (fs.existsSync(".env")) {
 
 import "./config/env.js";
 
-const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "REFRESH_SECRET", "COOKIE_SECRET"];
+const requiredEnv = [
+  "DATABASE_URL",
+  "JWT_SECRET",
+  "REFRESH_SECRET",
+  "COOKIE_SECRET",
+  "OPENAI_API_KEY", // ✅ Added validation for OpenAI
+];
 for (const key of requiredEnv) {
   if (!process.env[key]) {
     throw new Error(`❌ Missing env var: ${key}`);
@@ -36,6 +42,9 @@ import { log, serveStatic, setupVite } from "./vite.js";
 
 // ✅ Import centralized CORS middleware
 import { corsMiddleware } from "./middleware/cors.js";
+
+// ✅ Import OpenAI router
+import openaiRouter from "./routes/openai.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,6 +95,7 @@ if (process.env.NODE_ENV !== "test") {
     "/_seed-demo",
     "/_seed-admin",
     "/_debug",
+    "/api/openai/analyze", // ✅ Exempt OpenAI route from CSRF since it's JSON API
   ];
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -130,6 +140,9 @@ app.get("/healthz", (_req, res) => res.send("ok"));
 --------------------------------------------------------- */
 await registerRoutes(app);
 
+// ✅ Add OpenAI recipient-ranking & forecasting route
+app.use("/api/openai", openaiRouter);
+
 /* ---------------------------------------------------------
    ✅ Error Handler
 --------------------------------------------------------- */
@@ -149,11 +162,15 @@ app.use(errorHandler);
       server.listen(port, "0.0.0.0", async () => {
         log(`[Server] 🚀 Dev server running at http://localhost:${port}`);
         try {
-          const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, { method: "POST" });
+          const res = await fetch(`http://localhost:${port}/api/auth/_seed-demo`, {
+            method: "POST",
+          });
           const data = (await res.json()) as { message: string };
           log(`[Server] 🌱 Demo user seeded: ${data.message}`);
 
-          const resAdmin = await fetch(`http://localhost:${port}/api/auth/_seed-admin`, { method: "POST" });
+          const resAdmin = await fetch(`http://localhost:${port}/api/auth/_seed-admin`, {
+            method: "POST",
+          });
           const adminData = (await resAdmin.json()) as { message: string };
           log(`[Server] 👑 Admin user seeded: ${adminData.message}`);
         } catch (err) {

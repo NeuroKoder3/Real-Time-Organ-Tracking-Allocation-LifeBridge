@@ -44,7 +44,7 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include", // ✅ Required for CSRF cookie
+    credentials: "include", // ✅ Required for CSRF cookie/session
   };
 
   const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
@@ -76,7 +76,7 @@ export async function api<T = unknown>(
       const text = await response.text();
       if (text) msg = text;
     } catch {
-      // ignore
+      // fallback msg
     }
     console.error(`❌ [API] Error ${response.status}: ${msg}`);
     throw new Error(msg);

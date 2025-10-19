@@ -3,27 +3,27 @@ import cors from "cors";
 
 /**
  * 🌐 Centralized CORS Middleware
- * Handles all allowed origins, methods, and headers in one place.
- * Update the `allowedOrigins` list below as needed.
+ * Handles allowed origins, methods, headers, and credentials securely.
+ * Update the `allowedOrigins` list as needed.
  */
 
 const allowedOrigins = [
-  "https://lifebridge.online",
-  "https://www.lifebridge.online",
-  "https://api.lifebridge.online",
-  "https://lifebridge-opotracking.netlify.app",
-  "https://real-time-organ-tracking-allocation.onrender.com", // optional legacy
-  "http://localhost:5173",
+  "https://lifebridge.online",                           // Netlify production
+  "https://www.lifebridge.online",                       // Optional www support
+  "https://api.lifebridge.online",                       // API subdomain (if used)
+  "https://lifebridge-opotracking.netlify.app",          // Netlify preview or secondary frontend
+  "https://real-time-organ-tracking-allocation.onrender.com", // Legacy Render frontend
+  "http://localhost:5173",                               // Vite dev
   "http://127.0.0.1:5173",
-  "http://localhost:5000",
+  "http://localhost:5000",                               // Local backend
 ];
 
-// ✅ Configure CORS for all HTTP methods
+// ✅ CORS Middleware Setup
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
+    // Allow requests with no origin (e.g. mobile apps, server-to-server)
     if (!origin) {
-      console.log("🌍 [CORS] No Origin (likely server-side or mobile app)");
+      console.log("🌍 [CORS] No origin header — likely internal or mobile");
       return callback(null, true);
     }
 
@@ -36,8 +36,8 @@ export const corsMiddleware = cors({
     return callback(new Error("Not allowed by CORS"), false);
   },
 
-  credentials: true, // Important: allows cookies/sessions
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  credentials: true, // Required for cookies / session auth
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Origin",
     "X-Requested-With",
@@ -47,7 +47,7 @@ export const corsMiddleware = cors({
     "X-CSRF-Token",
   ],
   exposedHeaders: ["X-CSRF-Token"],
-  optionsSuccessStatus: 204, // For legacy browsers
+  optionsSuccessStatus: 204, // For legacy clients using OPTIONS
 });
 
 export default corsMiddleware;

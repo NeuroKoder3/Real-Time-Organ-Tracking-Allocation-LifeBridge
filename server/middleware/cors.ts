@@ -1,53 +1,45 @@
-// ✅ server/middleware/cors.ts
-import cors from "cors";
+// ✅ server/middleware/cors.ts (Manual CORS headers)
+
+import type { Request, Response, NextFunction } from "express";
 
 /**
- * 🌐 Centralized CORS Middleware
- * Handles allowed origins, methods, headers, and credentials securely.
- * Update the `allowedOrigins` list as needed.
+ * ✅ Centralized Manual CORS Middleware
+ * Fixes deployment issues where CORS package may not behave as expected
+ * Adds headers directly for both simple and preflight (OPTIONS) requests
  */
 
 const allowedOrigins = [
-  "https://lifebridge.online",                           // Netlify production
-  "https://www.lifebridge.online",                       // Optional www support
-  "https://api.lifebridge.online",                       // API subdomain (if used)
-  "https://lifebridge-opotracking.netlify.app",          // Netlify preview or secondary frontend
-  "https://real-time-organ-tracking-allocation.onrender.com", // Legacy Render frontend
-  "http://localhost:5173",                               // Vite dev
+  "https://lifebridge.online",                            // Production frontend
+  "https://www.lifebridge.online",                        // Optional www
+  "https://api.lifebridge.online",                        // API subdomain
+  "https://lifebridge-opotracking.netlify.app",           // Netlify preview
+  "https://real-time-organ-tracking-allocation.onrender.com", // ✅ Render frontend
+  "http://localhost:5173",                                // Local dev
   "http://127.0.0.1:5173",
-  "http://localhost:5000",                               // Local backend
 ];
 
-// ✅ CORS Middleware Setup
-export const corsMiddleware = cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, server-to-server)
-    if (!origin) {
-      console.log("🌍 [CORS] No origin header — likely internal or mobile");
-      return callback(null, true);
-    }
+export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
+  const origin = req.headers.origin || "";
 
-    if (allowedOrigins.includes(origin)) {
-      console.log(`✅ [CORS] Allowed origin: ${origin}`);
-      return callback(null, true);
-    }
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
 
-    console.warn(`🚫 [CORS] Blocked origin: ${origin}`);
-    return callback(new Error("Not allowed by CORS"), false);
-  },
+  res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
-  credentials: true, // Required for cookies / session auth
-  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Origin",
-    "X-Requested-With",
-    "Content-Type",
-    "Accept",
-    "Authorization",
-    "X-CSRF-Token",
-  ],
-  exposedHeaders: ["X-CSRF-Token"],
-  optionsSuccessStatus: 204, // For legacy clients using OPTIONS
-});
+  // Optional: for Chrome bug workaround and preflight stability
+  res.setHeader("Access-Control-Max-Age", "7200");
 
-export default corsMiddleware;
+  // Preflight support
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+}

@@ -1,10 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "include": ["server/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "client", "build"],
+  "exclude": ["node_modules", "client", "build", "dist"],
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": ".", // <-- revert this
+    "rootDir": ".",  // ✅ FIXED: root at project root so 'shared' and 'server' both included
     "noEmit": false,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",

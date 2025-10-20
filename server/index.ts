@@ -1,31 +1,11 @@
+// ✅ Lifebridge Server — Hardened Against All CORS Issues (TypeScript version)
+
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
 import fetch from "node-fetch";
-
-if (fs.existsSync(".env")) {
-  dotenv.config();
-} else {
-  console.warn("⚠️  .env file not found.");
-}
-
-import "./config/env.js";
-
-const requiredEnv = [
-  "DATABASE_URL",
-  "JWT_SECRET",
-  "REFRESH_SECRET",
-  "COOKIE_SECRET",
-  "OPENAI_API_KEY", // ✅ Added validation for OpenAI
-];
-for (const key of requiredEnv) {
-  if (!process.env[key]) {
-    throw new Error(`❌ Missing env var: ${key}`);
-  }
-}
-
 import express, {
   type Express,
   type Request,
@@ -39,24 +19,100 @@ import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
-
-// ✅ Import centralized CORS middleware
-import { corsMiddleware } from "./middleware/cors.js";
-
-// ✅ Import OpenAI router
 import openaiRouter from "./routes/openai.js";
+import cors, { CorsOptions } from "cors";
 
+// ✅ Load environment variables
+if (fs.existsSync(".env")) {
+  dotenv.config();
+} else {
+  console.warn("⚠️  .env file not found.");
+}
+
+import "./config/env.js";
+
+// ✅ Validate required environment variables
+const requiredEnv = [
+  "DATABASE_URL",
+  "JWT_SECRET",
+  "REFRESH_SECRET",
+  "COOKIE_SECRET",
+  "OPENAI_API_KEY",
+];
+for (const key of requiredEnv) {
+  if (!process.env[key]) throw new Error(`❌ Missing env var: ${key}`);
+}
+
+// ✅ Express setup
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app: Express = express();
 const isProd = process.env.NODE_ENV === "production";
 
 /* ---------------------------------------------------------
-   ✅ CORS (must be first)
+   🛡️ UNIVERSAL CORS FIX — Must Run First
 --------------------------------------------------------- */
-app.use(corsMiddleware);
-app.options("*", corsMiddleware);
+const allowedOrigins = [
+  "https://lifebridge.online",
+  "https://www.lifebridge.online",
+  "https://api.lifebridge.online",
+  "https://lifebridge-opotracking.netlify.app",
+  "https://real-time-organ-tracking-allocation.onrender.com",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 [CORS] Blocked origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "X-CSRF-Token",
+  ],
+  exposedHeaders: ["Access-Control-Allow-Origin"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+// ✅ Apply cors() globally
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.header("Vary", "Origin");
+  next();
+});
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Preflight
+
+// ✅ Manual fallback headers (safety net for Render/Netlify)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin || "";
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Max-Age", "7200");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 /* ---------------------------------------------------------
    ✅ Security Middleware
@@ -69,7 +125,7 @@ app.use(
 );
 
 /* ---------------------------------------------------------
-   ✅ Core Parsers — must come BEFORE csurf
+   ✅ Core Parsers
 --------------------------------------------------------- */
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
@@ -95,7 +151,7 @@ if (process.env.NODE_ENV !== "test") {
     "/_seed-demo",
     "/_seed-admin",
     "/_debug",
-    "/api/openai/analyze", // ✅ Exempt OpenAI route from CSRF since it's JSON API
+    "/api/openai/analyze",
   ];
 
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -103,7 +159,6 @@ if (process.env.NODE_ENV !== "test") {
     return csrfMiddleware(req, res, next);
   });
 
-  // ✅ CSRF token route now works because middleware runs first
   app.get("/api/csrf-token", (req: Request, res: Response) => {
     try {
       const token = (req as any).csrfToken?.();
@@ -130,17 +185,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.get("/api/health", (_req, res) =>
+app.get("/api/health", (_req: Request, res: Response) =>
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
 );
-app.get("/healthz", (_req, res) => res.send("ok"));
+app.get("/healthz", (_req: Request, res: Response) => res.send("ok"));
 
 /* ---------------------------------------------------------
    ✅ API Routes
 --------------------------------------------------------- */
 await registerRoutes(app);
-
-// ✅ Add OpenAI recipient-ranking & forecasting route
 app.use("/api/openai", openaiRouter);
 
 /* ---------------------------------------------------------

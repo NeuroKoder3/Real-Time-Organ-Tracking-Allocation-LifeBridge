@@ -1,4 +1,4 @@
-// ✅ server/middleware/cors.ts (Manual CORS headers)
+// ✅ server/middleware/cors.ts (Hardened CORS Middleware)
 
 import type { Request, Response, NextFunction } from "express";
 
@@ -13,7 +13,7 @@ const allowedOrigins = [
   "https://www.lifebridge.online",                        // Optional www
   "https://api.lifebridge.online",                        // API subdomain
   "https://lifebridge-opotracking.netlify.app",           // Netlify preview
-  "https://real-time-organ-tracking-allocation.onrender.com", // ✅ Render frontend
+  "https://real-time-organ-tracking-allocation.onrender.com", // Render frontend
   "http://localhost:5173",                                // Local dev
   "http://127.0.0.1:5173",
 ];
@@ -21,24 +21,33 @@ const allowedOrigins = [
 export function corsMiddleware(req: Request, res: Response, next: NextFunction) {
   const origin = req.headers.origin || "";
 
+  // Always include Vary: Origin
+  res.setHeader("Vary", "Origin");
+
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
+  } else {
+    // Optional: Log blocked origin for debugging
+    if (process.env.NODE_ENV !== "production" && origin) {
+      console.warn(`🚫 [CORS] Blocked origin: ${origin}`);
+    }
   }
 
-  res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+  // Core CORS headers
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
+  );
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
   );
   res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Max-Age", "7200"); // cache preflight 2h
 
-  // Optional: for Chrome bug workaround and preflight stability
-  res.setHeader("Access-Control-Max-Age", "7200");
-
-  // Preflight support
+  // ✅ Handle preflight OPTIONS requests cleanly
   if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
+    return res.status(204).end();
   }
 
   next();

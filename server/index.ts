@@ -1,4 +1,4 @@
-// ✅ Lifebridge Server — Final CORS-Stable Build
+// ✅ Lifebridge Server — Final CORS-Stable Build + Health Route Fix
 
 import dotenv from "dotenv";
 import fs from "fs";
@@ -44,7 +44,7 @@ const app: Express = express();
 const isProd = process.env.NODE_ENV === "production";
 
 /* ---------------------------------------------------------
-   🛡️ UNIVERSAL CORS FIX — Now Truly Global
+   🛡️ UNIVERSAL CORS FIX — Always First
 --------------------------------------------------------- */
 const allowedOrigins = [
   "https://lifebridge.online",
@@ -78,7 +78,6 @@ const corsOptions: CorsOptions = {
   optionsSuccessStatus: 204,
 };
 
-// 🧩 Ensure CORS headers ALWAYS exist
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader("Vary", "Origin");
   const origin = req.headers.origin || "";
@@ -99,7 +98,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ✅ Apply CORS middleware too — ensures Express sees it
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
@@ -119,6 +117,19 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
+
+/* ---------------------------------------------------------
+   ✅ Health Endpoints (moved above static + routes)
+--------------------------------------------------------- */
+app.get("/api/health", (_req: Request, res: Response) =>
+  res.status(200).json({
+    ok: true,
+    env: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  })
+);
+
+app.get("/health", (_req: Request, res: Response) => res.send("ok"));
 
 /* ---------------------------------------------------------
    ✅ CSRF Protection
@@ -161,7 +172,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 /* ---------------------------------------------------------
-   ✅ Logging & Health
+   ✅ Logging
 --------------------------------------------------------- */
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
@@ -174,11 +185,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.get("/api/health", (_req, res) =>
-  res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
-);
-app.get("/healthz", (_req, res) => res.send("ok"));
-
 /* ---------------------------------------------------------
    ✅ API Routes
 --------------------------------------------------------- */
@@ -189,7 +195,6 @@ app.use("/api/openai", openaiRouter);
    ✅ Error + Final CORS Patch
 --------------------------------------------------------- */
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  // 🔧 Ensure even errors return CORS headers
   const origin = req.headers.origin || "";
   if (allowedOrigins.includes(origin))
     res.setHeader("Access-Control-Allow-Origin", origin);

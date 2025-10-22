@@ -19,8 +19,14 @@ import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
-import openaiRouter from "./routes/openai.js";
 import cors, { CorsOptions } from "cors";
+
+// 🆕 New route imports
+import openaiRouter from "./routes/openai.js";
+import allocationsRouter from "./routes/allocations.js";
+import organsRouter from "./routes/organs.js";
+import recipientsRouter from "./routes/recipients.js";
+import transportsRouter from "./routes/transports.js";
 
 if (fs.existsSync(".env")) dotenv.config();
 else console.warn("⚠️  .env file not found.");
@@ -189,7 +195,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
    ✅ API Routes
 --------------------------------------------------------- */
 await registerRoutes(app);
+
 app.use("/api/openai", openaiRouter);
+app.use("/api/allocations", allocationsRouter);
+app.use("/api/organs", organsRouter);
+app.use("/api/recipients", recipientsRouter);
+app.use("/api/transports", transportsRouter);
 
 /* ---------------------------------------------------------
    ✅ Error + Final CORS Patch

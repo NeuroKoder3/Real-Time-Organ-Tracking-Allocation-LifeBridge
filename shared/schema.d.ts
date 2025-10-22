@@ -1,4 +1,11 @@
 import { z } from "zod";
+export declare const userRoleEnum: import("drizzle-orm/pg-core").PgEnum<["admin", "coordinator", "surgeon", "transport"]>;
+export declare const donorStatusEnum: import("drizzle-orm/pg-core").PgEnum<["active", "inactive", "eligible", "ineligible", "unknown"]>;
+export declare const consentStatusEnum: import("drizzle-orm/pg-core").PgEnum<["pending", "consented", "withdrawn"]>;
+export declare const organStatusEnum: import("drizzle-orm/pg-core").PgEnum<["available", "allocated", "discarded", "transplanted"]>;
+export declare const allocationStatusEnum: import("drizzle-orm/pg-core").PgEnum<["proposed", "accepted", "declined", "expired"]>;
+export declare const transportStatusEnum: import("drizzle-orm/pg-core").PgEnum<["scheduled", "in_progress", "completed", "failed"]>;
+export declare const transportModeEnum: import("drizzle-orm/pg-core").PgEnum<["ground", "commercial_flight", "charter_flight", "helicopter", "drone"]>;
 export declare const sessions: import("drizzle-orm/pg-core").PgTableWithColumns<{
     name: "sessions";
     schema: undefined;
@@ -87,7 +94,26 @@ export declare const users: import("drizzle-orm/pg-core").PgTableWithColumns<{
             columnType: "PgVarchar";
             data: string;
             driverParam: string;
-            notNull: false;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
+        password: import("drizzle-orm/pg-core").PgColumn<{
+            name: "password";
+            tableName: "users";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: true;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -160,21 +186,19 @@ export declare const users: import("drizzle-orm/pg-core").PgTableWithColumns<{
             name: "role";
             tableName: "users";
             dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
+            columnType: "PgEnumColumn";
+            data: "admin" | "coordinator" | "surgeon" | "transport";
             driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
+            enumValues: ["admin", "coordinator", "surgeon", "transport"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
+        }, {}, {}>;
         department: import("drizzle-orm/pg-core").PgColumn<{
             name: "department";
             tableName: "users";
@@ -328,6 +352,61 @@ export declare const donors: import("drizzle-orm/pg-core").PgTableWithColumns<{
         }, {}, {
             length: number | undefined;
         }>;
+        firstName: import("drizzle-orm/pg-core").PgColumn<{
+            name: "first_name";
+            tableName: "donors";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
+        lastName: import("drizzle-orm/pg-core").PgColumn<{
+            name: "last_name";
+            tableName: "donors";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
+        dateOfBirth: import("drizzle-orm/pg-core").PgColumn<{
+            name: "date_of_birth";
+            tableName: "donors";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         bloodType: import("drizzle-orm/pg-core").PgColumn<{
             name: "blood_type";
             tableName: "donors";
@@ -440,40 +519,36 @@ export declare const donors: import("drizzle-orm/pg-core").PgTableWithColumns<{
             name: "status";
             tableName: "donors";
             dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
+            columnType: "PgEnumColumn";
+            data: "active" | "inactive" | "eligible" | "ineligible" | "unknown";
             driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
+            enumValues: ["active", "inactive", "eligible", "ineligible", "unknown"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
+        }, {}, {}>;
         consentStatus: import("drizzle-orm/pg-core").PgColumn<{
             name: "consent_status";
             tableName: "donors";
             dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
+            columnType: "PgEnumColumn";
+            data: "pending" | "consented" | "withdrawn";
             driverParam: string;
             notNull: true;
-            hasDefault: false;
+            hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
+            enumValues: ["pending", "consented", "withdrawn"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
+        }, {}, {}>;
         medicalHistory: import("drizzle-orm/pg-core").PgColumn<{
             name: "medical_history";
             tableName: "donors";
@@ -705,6 +780,25 @@ export declare const recipients: import("drizzle-orm/pg-core").PgTableWithColumn
             data: string;
             driverParam: string;
             notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: [string, ...string[]];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {
+            length: number | undefined;
+        }>;
+        hospital: import("drizzle-orm/pg-core").PgColumn<{
+            name: "hospital";
+            tableName: "recipients";
+            dataType: "string";
+            columnType: "PgVarchar";
+            data: string;
+            driverParam: string;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -952,15 +1046,15 @@ export declare const organs: import("drizzle-orm/pg-core").PgTableWithColumns<{
         }, {}, {
             length: number | undefined;
         }>;
-        status: import("drizzle-orm/pg-core").PgColumn<{
-            name: "status";
+        condition: import("drizzle-orm/pg-core").PgColumn<{
+            name: "condition";
             tableName: "organs";
             dataType: "string";
             columnType: "PgVarchar";
             data: string;
             driverParam: string;
-            notNull: true;
-            hasDefault: true;
+            notNull: false;
+            hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
@@ -971,6 +1065,23 @@ export declare const organs: import("drizzle-orm/pg-core").PgTableWithColumns<{
         }, {}, {
             length: number | undefined;
         }>;
+        status: import("drizzle-orm/pg-core").PgColumn<{
+            name: "status";
+            tableName: "organs";
+            dataType: "string";
+            columnType: "PgEnumColumn";
+            data: "available" | "allocated" | "discarded" | "transplanted";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["available", "allocated", "discarded", "transplanted"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         viabilityHours: import("drizzle-orm/pg-core").PgColumn<{
             name: "viability_hours";
             tableName: "organs";
@@ -1222,6 +1333,23 @@ export declare const allocations: import("drizzle-orm/pg-core").PgTableWithColum
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        courierId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "courier_id";
+            tableName: "allocations";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         matchScore: import("drizzle-orm/pg-core").PgColumn<{
             name: "match_score";
             tableName: "allocations";
@@ -1260,21 +1388,19 @@ export declare const allocations: import("drizzle-orm/pg-core").PgTableWithColum
             name: "status";
             tableName: "allocations";
             dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
+            columnType: "PgEnumColumn";
+            data: "proposed" | "accepted" | "declined" | "expired";
             driverParam: string;
             notNull: true;
             hasDefault: true;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
+            enumValues: ["proposed", "accepted", "declined", "expired"];
             baseColumn: never;
             identity: undefined;
             generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
+        }, {}, {}>;
         proposedAt: import("drizzle-orm/pg-core").PgColumn<{
             name: "proposed_at";
             tableName: "allocations";
@@ -1418,14 +1544,31 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
-        transportMode: import("drizzle-orm/pg-core").PgColumn<{
-            name: "transport_mode";
+        courierId: import("drizzle-orm/pg-core").PgColumn<{
+            name: "courier_id";
+            tableName: "transports";
+            dataType: "string";
+            columnType: "PgUUID";
+            data: string;
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        startLocation: import("drizzle-orm/pg-core").PgColumn<{
+            name: "start_location";
             tableName: "transports";
             dataType: "string";
             columnType: "PgVarchar";
             data: string;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -1437,15 +1580,15 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
         }, {}, {
             length: number | undefined;
         }>;
-        status: import("drizzle-orm/pg-core").PgColumn<{
-            name: "status";
+        endLocation: import("drizzle-orm/pg-core").PgColumn<{
+            name: "end_location";
             tableName: "transports";
             dataType: "string";
             columnType: "PgVarchar";
             data: string;
             driverParam: string;
-            notNull: true;
-            hasDefault: true;
+            notNull: false;
+            hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
@@ -1456,6 +1599,40 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
         }, {}, {
             length: number | undefined;
         }>;
+        transportMode: import("drizzle-orm/pg-core").PgColumn<{
+            name: "transport_mode";
+            tableName: "transports";
+            dataType: "string";
+            columnType: "PgEnumColumn";
+            data: "ground" | "commercial_flight" | "charter_flight" | "helicopter" | "drone";
+            driverParam: string;
+            notNull: true;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["ground", "commercial_flight", "charter_flight", "helicopter", "drone"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        status: import("drizzle-orm/pg-core").PgColumn<{
+            name: "status";
+            tableName: "transports";
+            dataType: "string";
+            columnType: "PgEnumColumn";
+            data: "scheduled" | "in_progress" | "completed" | "failed";
+            driverParam: string;
+            notNull: true;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: ["scheduled", "in_progress", "completed", "failed"];
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         originLocation: import("drizzle-orm/pg-core").PgColumn<{
             name: "origin_location";
             tableName: "transports";
@@ -1463,7 +1640,7 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
             columnType: "PgVarchar";
             data: string;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -1482,7 +1659,7 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
             columnType: "PgVarchar";
             data: string;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -1501,7 +1678,7 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
             columnType: "PgTimestamp";
             data: Date;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -1518,7 +1695,7 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
             columnType: "PgTimestamp";
             data: Date;
             driverParam: string;
-            notNull: true;
+            notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
@@ -1551,23 +1728,6 @@ export declare const transports: import("drizzle-orm/pg-core").PgTableWithColumn
             dataType: "date";
             columnType: "PgTimestamp";
             data: Date;
-            driverParam: string;
-            notNull: false;
-            hasDefault: false;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: undefined;
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {}>;
-        courierId: import("drizzle-orm/pg-core").PgColumn<{
-            name: "courier_id";
-            tableName: "transports";
-            dataType: "string";
-            columnType: "PgUUID";
-            data: string;
             driverParam: string;
             notNull: false;
             hasDefault: false;
@@ -3043,39 +3203,31 @@ export declare const authAuditLogs: import("drizzle-orm/pg-core").PgTableWithCol
     };
     dialect: "pg";
 }>;
-export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
-export type InsertDonor = typeof donors.$inferInsert;
 export type Donor = typeof donors.$inferSelect;
-export type InsertRecipient = typeof recipients.$inferInsert;
 export type Recipient = typeof recipients.$inferSelect;
-export type InsertOrgan = typeof organs.$inferInsert;
 export type Organ = typeof organs.$inferSelect;
-export type InsertAllocation = typeof allocations.$inferInsert;
 export type Allocation = typeof allocations.$inferSelect;
-export type InsertTransport = typeof transports.$inferInsert;
 export type Transport = typeof transports.$inferSelect;
-export type InsertMessage = typeof messages.$inferInsert;
 export type Message = typeof messages.$inferSelect;
-export type InsertCustodyLog = typeof custodyLogs.$inferInsert;
 export type CustodyLog = typeof custodyLogs.$inferSelect;
-export type InsertMetric = typeof metrics.$inferInsert;
 export type Metric = typeof metrics.$inferSelect;
-export type InsertAuditLog = typeof auditLogs.$inferInsert;
 export type AuditLog = typeof auditLogs.$inferSelect;
-export type InsertAuthAuditLog = typeof authAuditLogs.$inferInsert;
 export type AuthAuditLog = typeof authAuditLogs.$inferSelect;
 export declare const insertDonorSchema: z.ZodObject<Omit<{
     id: z.ZodOptional<z.ZodString>;
     unosId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    firstName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    lastName: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    dateOfBirth: z.ZodOptional<z.ZodNullable<z.ZodDate>>;
     bloodType: z.ZodString;
     age: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     weight: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     height: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     location: z.ZodString;
     hospitalId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    status: z.ZodOptional<z.ZodString>;
-    consentStatus: z.ZodString;
+    status: z.ZodOptional<z.ZodEnum<["active", "inactive", "eligible", "ineligible", "unknown"]>>;
+    consentStatus: z.ZodOptional<z.ZodEnum<["pending", "consented", "withdrawn"]>>;
     medicalHistory: z.ZodOptional<z.ZodNullable<z.ZodType<import("drizzle-zod").Json, z.ZodTypeDef, import("drizzle-zod").Json>>>;
     hlaType: z.ZodOptional<z.ZodNullable<z.ZodType<import("drizzle-zod").Json, z.ZodTypeDef, import("drizzle-zod").Json>>>;
     createdAt: z.ZodOptional<z.ZodDate>;
@@ -3083,25 +3235,31 @@ export declare const insertDonorSchema: z.ZodObject<Omit<{
 }, "id" | "createdAt" | "updatedAt">, "strip", z.ZodTypeAny, {
     bloodType: string;
     location: string;
-    consentStatus: string;
+    firstName?: string | null | undefined;
+    lastName?: string | null | undefined;
     hospitalId?: string | null | undefined;
     unosId?: string | null | undefined;
+    dateOfBirth?: Date | null | undefined;
     age?: number | null | undefined;
     weight?: string | null | undefined;
     height?: string | null | undefined;
-    status?: string | undefined;
+    status?: "active" | "inactive" | "eligible" | "ineligible" | "unknown" | undefined;
+    consentStatus?: "pending" | "consented" | "withdrawn" | undefined;
     medicalHistory?: import("drizzle-zod").Json | undefined;
     hlaType?: import("drizzle-zod").Json | undefined;
 }, {
     bloodType: string;
     location: string;
-    consentStatus: string;
+    firstName?: string | null | undefined;
+    lastName?: string | null | undefined;
     hospitalId?: string | null | undefined;
     unosId?: string | null | undefined;
+    dateOfBirth?: Date | null | undefined;
     age?: number | null | undefined;
     weight?: string | null | undefined;
     height?: string | null | undefined;
-    status?: string | undefined;
+    status?: "active" | "inactive" | "eligible" | "ineligible" | "unknown" | undefined;
+    consentStatus?: "pending" | "consented" | "withdrawn" | undefined;
     medicalHistory?: import("drizzle-zod").Json | undefined;
     hlaType?: import("drizzle-zod").Json | undefined;
 }>;
@@ -3115,6 +3273,7 @@ export declare const insertRecipientSchema: z.ZodObject<Omit<{
     urgencyStatus: z.ZodString;
     waitlistDate: z.ZodDate;
     location: z.ZodString;
+    hospital: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     hospitalId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     medicalData: z.ZodOptional<z.ZodNullable<z.ZodType<import("drizzle-zod").Json, z.ZodTypeDef, import("drizzle-zod").Json>>>;
     hlaType: z.ZodOptional<z.ZodNullable<z.ZodType<import("drizzle-zod").Json, z.ZodTypeDef, import("drizzle-zod").Json>>>;
@@ -3136,6 +3295,7 @@ export declare const insertRecipientSchema: z.ZodObject<Omit<{
     unosId?: string | null | undefined;
     status?: string | undefined;
     hlaType?: import("drizzle-zod").Json | undefined;
+    hospital?: string | null | undefined;
     medicalData?: import("drizzle-zod").Json | undefined;
     antibodies?: import("drizzle-zod").Json | undefined;
     meldScore?: number | null | undefined;
@@ -3152,6 +3312,7 @@ export declare const insertRecipientSchema: z.ZodObject<Omit<{
     unosId?: string | null | undefined;
     status?: string | undefined;
     hlaType?: import("drizzle-zod").Json | undefined;
+    hospital?: string | null | undefined;
     medicalData?: import("drizzle-zod").Json | undefined;
     antibodies?: import("drizzle-zod").Json | undefined;
     meldScore?: number | null | undefined;
@@ -3162,7 +3323,8 @@ export declare const insertOrganSchema: z.ZodObject<Omit<{
     donorId: z.ZodString;
     organType: z.ZodString;
     bloodType: z.ZodString;
-    status: z.ZodOptional<z.ZodString>;
+    condition: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    status: z.ZodOptional<z.ZodEnum<["available", "allocated", "discarded", "transplanted"]>>;
     viabilityHours: z.ZodNumber;
     preservationStartTime: z.ZodDate;
     viabilityDeadline: z.ZodDate;
@@ -3181,7 +3343,8 @@ export declare const insertOrganSchema: z.ZodObject<Omit<{
     viabilityHours: number;
     preservationStartTime: Date;
     viabilityDeadline: Date;
-    status?: string | undefined;
+    status?: "available" | "allocated" | "discarded" | "transplanted" | undefined;
+    condition?: string | null | undefined;
     currentLocation?: string | null | undefined;
     temperature?: string | null | undefined;
     preservationSolution?: string | null | undefined;
@@ -3195,7 +3358,8 @@ export declare const insertOrganSchema: z.ZodObject<Omit<{
     viabilityHours: number;
     preservationStartTime: Date;
     viabilityDeadline: Date;
-    status?: string | undefined;
+    status?: "available" | "allocated" | "discarded" | "transplanted" | undefined;
+    condition?: string | null | undefined;
     currentLocation?: string | null | undefined;
     temperature?: string | null | undefined;
     preservationSolution?: string | null | undefined;
@@ -3207,9 +3371,10 @@ export declare const insertAllocationSchema: z.ZodObject<Omit<{
     id: z.ZodOptional<z.ZodString>;
     organId: z.ZodString;
     recipientId: z.ZodString;
+    courierId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     matchScore: z.ZodString;
     compatibilityData: z.ZodOptional<z.ZodNullable<z.ZodType<import("drizzle-zod").Json, z.ZodTypeDef, import("drizzle-zod").Json>>>;
-    status: z.ZodOptional<z.ZodString>;
+    status: z.ZodOptional<z.ZodEnum<["proposed", "accepted", "declined", "expired"]>>;
     proposedAt: z.ZodOptional<z.ZodDate>;
     respondedAt: z.ZodOptional<z.ZodNullable<z.ZodDate>>;
     respondedBy: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3219,7 +3384,8 @@ export declare const insertAllocationSchema: z.ZodObject<Omit<{
     organId: string;
     recipientId: string;
     matchScore: string;
-    status?: string | undefined;
+    status?: "proposed" | "accepted" | "declined" | "expired" | undefined;
+    courierId?: string | null | undefined;
     compatibilityData?: import("drizzle-zod").Json | undefined;
     respondedAt?: Date | null | undefined;
     respondedBy?: string | null | undefined;
@@ -3229,7 +3395,8 @@ export declare const insertAllocationSchema: z.ZodObject<Omit<{
     organId: string;
     recipientId: string;
     matchScore: string;
-    status?: string | undefined;
+    status?: "proposed" | "accepted" | "declined" | "expired" | undefined;
+    courierId?: string | null | undefined;
     compatibilityData?: import("drizzle-zod").Json | undefined;
     respondedAt?: Date | null | undefined;
     respondedBy?: string | null | undefined;
@@ -3240,15 +3407,17 @@ export declare const insertTransportSchema: z.ZodObject<Omit<{
     id: z.ZodOptional<z.ZodString>;
     organId: z.ZodString;
     allocationId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    transportMode: z.ZodString;
-    status: z.ZodOptional<z.ZodString>;
-    originLocation: z.ZodString;
-    destinationLocation: z.ZodString;
-    scheduledPickup: z.ZodDate;
-    scheduledDelivery: z.ZodDate;
+    courierId: z.ZodString;
+    startLocation: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    endLocation: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    transportMode: z.ZodEnum<["ground", "commercial_flight", "charter_flight", "helicopter", "drone"]>;
+    status: z.ZodOptional<z.ZodEnum<["scheduled", "in_progress", "completed", "failed"]>>;
+    originLocation: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    destinationLocation: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    scheduledPickup: z.ZodOptional<z.ZodNullable<z.ZodDate>>;
+    scheduledDelivery: z.ZodOptional<z.ZodNullable<z.ZodDate>>;
     actualPickup: z.ZodOptional<z.ZodNullable<z.ZodDate>>;
     actualDelivery: z.ZodOptional<z.ZodNullable<z.ZodDate>>;
-    courierId: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     carrierInfo: z.ZodOptional<z.ZodNullable<z.ZodType<import("drizzle-zod").Json, z.ZodTypeDef, import("drizzle-zod").Json>>>;
     trackingNumber: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     currentGpsLat: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3260,16 +3429,18 @@ export declare const insertTransportSchema: z.ZodObject<Omit<{
     updatedAt: z.ZodOptional<z.ZodDate>;
 }, "id" | "createdAt" | "updatedAt">, "strip", z.ZodTypeAny, {
     organId: string;
-    transportMode: string;
-    originLocation: string;
-    destinationLocation: string;
-    scheduledPickup: Date;
-    scheduledDelivery: Date;
-    status?: string | undefined;
+    courierId: string;
+    transportMode: "ground" | "commercial_flight" | "charter_flight" | "helicopter" | "drone";
+    status?: "scheduled" | "in_progress" | "completed" | "failed" | undefined;
     allocationId?: string | null | undefined;
+    startLocation?: string | null | undefined;
+    endLocation?: string | null | undefined;
+    originLocation?: string | null | undefined;
+    destinationLocation?: string | null | undefined;
+    scheduledPickup?: Date | null | undefined;
+    scheduledDelivery?: Date | null | undefined;
     actualPickup?: Date | null | undefined;
     actualDelivery?: Date | null | undefined;
-    courierId?: string | null | undefined;
     carrierInfo?: import("drizzle-zod").Json | undefined;
     trackingNumber?: string | null | undefined;
     currentGpsLat?: string | null | undefined;
@@ -3279,16 +3450,18 @@ export declare const insertTransportSchema: z.ZodObject<Omit<{
     costEstimate?: string | null | undefined;
 }, {
     organId: string;
-    transportMode: string;
-    originLocation: string;
-    destinationLocation: string;
-    scheduledPickup: Date;
-    scheduledDelivery: Date;
-    status?: string | undefined;
+    courierId: string;
+    transportMode: "ground" | "commercial_flight" | "charter_flight" | "helicopter" | "drone";
+    status?: "scheduled" | "in_progress" | "completed" | "failed" | undefined;
     allocationId?: string | null | undefined;
+    startLocation?: string | null | undefined;
+    endLocation?: string | null | undefined;
+    originLocation?: string | null | undefined;
+    destinationLocation?: string | null | undefined;
+    scheduledPickup?: Date | null | undefined;
+    scheduledDelivery?: Date | null | undefined;
     actualPickup?: Date | null | undefined;
     actualDelivery?: Date | null | undefined;
-    courierId?: string | null | undefined;
     carrierInfo?: import("drizzle-zod").Json | undefined;
     trackingNumber?: string | null | undefined;
     currentGpsLat?: string | null | undefined;
@@ -3522,8 +3695,18 @@ export type InsertCustodyLogData = z.infer<typeof insertCustodyLogSchema>;
 export type InsertMetricData = z.infer<typeof insertMetricSchema>;
 export type InsertAuditLogData = z.infer<typeof insertAuditLogSchema>;
 export type InsertAuthAuditLogData = z.infer<typeof insertAuthAuditLogSchema>;
+export type UpsertUser = typeof users.$inferInsert;
+export type InsertDonor = InsertDonorData;
+export type InsertRecipient = InsertRecipientData;
+export type InsertOrgan = InsertOrganData;
+export type InsertAllocation = InsertAllocationData;
+export type InsertTransport = InsertTransportData;
+export type InsertMessage = InsertMessageData;
+export type InsertCustodyLog = InsertCustodyLogData;
+export type InsertMetric = InsertMetricData;
+export type InsertAuditLog = InsertAuditLogData;
+export type InsertAuthAuditLog = InsertAuthAuditLogData;
 export type UserRole = "admin" | "coordinator" | "surgeon" | "transport";
-export type Department = "cardiology" | "nephrology" | "hepatology" | "pulmonology" | "transplant_coordination";
 export interface UIRecipient extends Recipient {
     name: string;
     urgencyLevel: string;

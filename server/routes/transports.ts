@@ -5,28 +5,18 @@ import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
-/**
- * ✅ Handle CORS Preflight Requests
- * Ensures browser OPTIONS checks pass before hitting auth or logic.
- */
-router.options("/", (_req: Request, res: Response) => {
-  res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,OPTIONS"
-  );
+router.options("/", (req: Request, res: Response) => {
+  const origin = req.headers.origin;
+  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.sendStatus(204);
 });
 
-/**
- * GET /api/transports
- * → Get all transport events (deliveries in progress or completed)
- */
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const transports = await storage.getTransports();
@@ -37,26 +27,20 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/transports
- * → Create a new transport record
- */
 router.post("/", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { organId, courierId, startLocation, endLocation, status } = req.body;
 
-    // ✅ Basic validation
     if (!organId || !courierId || !startLocation) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // ✅ Create transport record
     const transport = await storage.createTransport({
       organId,
       courierId,
       startLocation,
       endLocation,
-      transportMode: "ground", // required default
+      transportMode: "ground",
       status: status ?? "scheduled",
     });
 

@@ -5,28 +5,18 @@ import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
-/**
- * ✅ Handle CORS Preflight Requests
- * Ensures OPTIONS requests from browsers are handled before auth middleware.
- */
-router.options("/", (_req: Request, res: Response) => {
-  res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,OPTIONS"
-  );
+router.options("/", (req: Request, res: Response) => {
+  const origin = req.headers.origin;
+  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.sendStatus(204);
 });
 
-/**
- * GET /api/allocations
- * → Retrieve all organ allocations
- */
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const allocations = await storage.getAllocations();
@@ -37,25 +27,19 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/allocations
- * → Create a new allocation record
- */
 router.post("/", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { organId, recipientId, courierId, status } = req.body;
 
-    // ✅ Required field validation
     if (!organId || !recipientId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // ✅ Create allocation record
     const allocation = await storage.createAllocation({
       organId,
       recipientId,
       courierId,
-      matchScore: "1.0", // required by schema
+      matchScore: "1.0",
       status: status ?? "proposed",
     });
 

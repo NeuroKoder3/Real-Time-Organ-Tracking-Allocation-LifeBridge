@@ -19,7 +19,6 @@ import cookieParser from "cookie-parser";
 import registerRoutes from "./routes.js";
 import errorHandler from "./middleware/errorHandler.js";
 import { log, serveStatic, setupVite } from "./vite.js";
-import cors, { CorsOptions } from "cors";
 
 // 🆕 New route imports
 import openaiRouter from "./routes/openai.js";
@@ -50,7 +49,7 @@ const app: Express = express();
 const isProd = process.env.NODE_ENV === "production";
 
 /* ---------------------------------------------------------
-   🛡️ UNIVERSAL CORS FIX — Always First
+   ✅ CORS FIX — Always First
 --------------------------------------------------------- */
 const allowedOrigins = [
   "https://lifebridge.online",
@@ -62,34 +61,14 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
 ];
 
-const corsOptions: CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else {
-      console.warn(`🚫 [CORS] Blocked origin: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Origin",
-    "X-Requested-With",
-    "Content-Type",
-    "Accept",
-    "Authorization",
-    "X-CSRF-Token",
-  ],
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
+// ✅ Apply universal CORS headers early
 app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader("Vary", "Origin");
   const origin = req.headers.origin || "";
   if (allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
+
+  res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
     "Access-Control-Allow-Headers",
@@ -100,12 +79,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS"
   );
   res.setHeader("Access-Control-Max-Age", "7200");
-  if (req.method === "OPTIONS") return res.sendStatus(204);
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
   next();
 });
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 /* ---------------------------------------------------------
    ✅ Security Middleware
@@ -125,7 +105,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 /* ---------------------------------------------------------
-   ✅ Health Endpoints (moved above static + routes)
+   ✅ Health Endpoints
 --------------------------------------------------------- */
 app.get("/api/health", (_req: Request, res: Response) =>
   res.status(200).json({
@@ -134,7 +114,6 @@ app.get("/api/health", (_req: Request, res: Response) =>
     timestamp: new Date().toISOString(),
   })
 );
-
 app.get("/health", (_req: Request, res: Response) => res.send("ok"));
 
 /* ---------------------------------------------------------

@@ -6,6 +6,24 @@ import { storage } from "../storage.js";
 const router: ExpressRouter = Router();
 
 /**
+ * ✅ Handle CORS Preflight Requests for this route
+ * Allows browsers to complete OPTIONS preflight successfully.
+ */
+router.options("/", (_req: Request, res: Response) => {
+  res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
+});
+
+/**
  * GET /api/organs
  * → Retrieve all organs from database
  */
@@ -97,6 +115,23 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
     console.error("[Organs] POST error:", error);
     res.status(500).json({ message: "Failed to create organ" });
   }
+});
+
+/**
+ * ✅ Handle CORS Preflight for PUT route
+ */
+router.options("/", (_req: Request, res: Response) => {
+  res.setHeader("Access-Control-Allow-Origin", _req.headers.origin || "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(204);
 });
 
 /**

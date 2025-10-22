@@ -10,10 +10,7 @@ export default defineConfig(({ mode }) => {
 
     plugins: [react()],
 
-    // ✅ Only VITE_API_URL is needed
-    define: {
-      "import.meta.env.VITE_API_URL": JSON.stringify(env.VITE_API_URL),
-    },
+    // ✅ Vite automatically injects all VITE_ env vars — no need for manual define
 
     resolve: {
       alias: {

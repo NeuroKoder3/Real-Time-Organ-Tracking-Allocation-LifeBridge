@@ -1,10 +1,16 @@
+// ✅ Lifebridge Frontend API Utility
+// Handles authenticated fetch requests, CSRF cookies, and error management.
+
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || "https://api.lifebridge.online/api";
+  import.meta.env.VITE_API_URL?.trim() || "https://api.lifebridge.online/api";
 
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);
 }
 
+/**
+ * Safely parse JSON from a Response object
+ */
 async function safeJsonParse<T>(res: Response): Promise<T | null> {
   try {
     const contentType = res.headers.get("Content-Type") || "";
@@ -20,6 +26,9 @@ async function safeJsonParse<T>(res: Response): Promise<T | null> {
   }
 }
 
+/**
+ * Main API wrapper for all backend calls
+ */
 export async function api<T = unknown>(
   path: string,
   options: RequestInit = {}

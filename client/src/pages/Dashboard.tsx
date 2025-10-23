@@ -180,21 +180,21 @@ export default function Dashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const token = getAuthToken();
+
+  // If no token, redirect (or show login prompt)
+  if (!token) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-lg text-muted-foreground">You must log in to view this dashboard.</p>
+        <Button onClick={() => navigate("/login")}>Go to Login</Button>
+      </div>
+    );
+  }
+
   // Secure fetch wrapper
   const fetchWithAuth = async <T,>(url: string): Promise<T> => {
-    const token = getAuthToken();
-    if (!token) {
-      // No token: we should navigate to login or handle unauthenticated state
-      toast({
-        title: "Not Authenticated",
-        description: "Please log in to access dashboard data.",
-        variant: "destructive",
-      });
-      navigate("/login");
-      // Return a rejection so that react-query knows the query failed/should be disabled
-      return Promise.reject(new Error("No auth token"));
-    }
-
+    // token is guaranteed present here
     const res = await fetch(`${API_BASE}${url}`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -203,6 +203,11 @@ export default function Dashboard() {
     });
 
     if (!res.ok) {
+      if (res.status === 401) {
+        // token invalid or expired: clear & redirect
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
       toast({
         title: "Error Loading Data",
         description: `Failed to load ${url}`,
@@ -213,14 +218,12 @@ export default function Dashboard() {
     return res.json();
   };
 
-  // ✅ Queries – only defined if token exists (via useQuery’s enabled option)
-  const token = getAuthToken();
-
+  // ✅ Queries — only enabled if token exists
   const { data: organs = [] } = useQuery<Organ[]>({
     queryKey: ["organs"],
     queryFn: () => fetchWithAuth<Organ[]>("/api/organs"),
     refetchInterval: 30000,
-    enabled: !!token, // only run if token truthy
+    enabled: !!token,
   });
 
   const { data: transports = [] } = useQuery<Transport[]>({
@@ -236,16 +239,6 @@ export default function Dashboard() {
     enabled: !!token,
   });
 
-  // If no token, optionally render a placeholder or redirect (the navigate above will handle redirect)
-  if (!token) {
-    return (
-      <div className="p-6 text-center">
-        <p className="text-lg text-muted-foreground">You must log in to view this dashboard.</p>
-        <Button onClick={() => navigate("/login")}>Go to Login</Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -253,7 +246,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold">Organ Tracking Dashboard</h1>
           <p className="text-muted-foreground">
-            Real-time monitoring of organ allocation and transportation
+            Real‑time monitoring of organ allocation and transportation
           </p>
         </div>
         <div className="flex gap-2">
@@ -301,9 +294,9 @@ export default function Dashboard() {
                   className="flex items-center justify-between p-3 bg-background rounded-lg"
                 >
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-destructive" />
+                    <Clock className="h‑4 w‑4 text‑destructive" />
                     <span className="text-sm">
-                      {o.organType} at {o.currentLocation ?? "Unknown"} - Critical viability
+                      {o.organType} at {o.currentLocation ?? "Unknown"} — Critical viability
                     </span>
                   </div>
                   <Button size="sm" variant="destructive">
@@ -377,7 +370,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Active Transports</CardTitle>
-            <p className="text-sm text-muted-foreground">Real-time transport tracking</p>
+            <p className="text-sm text-muted-foreground">Real‑time transport tracking</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {transports.map((t) => (
@@ -434,27 +427,26 @@ export default function Dashboard() {
       {/* Activity Feed */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
+          <div className="flex items‑center gap‑2">
+            <Activity className="h‑4 w‑4" />
             <CardTitle>Recent Activity</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full" />
-              <span className="text-muted-foreground">2 min ago</span>
+            <div className="flex items‑center gap‑3">
+              <div className="w‑2 h‑2 bg‑green‑500 rounded‑full" />
+              <span className="text‑muted‑foreground">2 min ago</span>
               <span>Heart successfully transplanted at Johns Hopkins</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full" />
-              <span className="text-muted-foreground">15 min ago</span>
+            <div className="flex items‑center gap‑3">
+              <div className="w‑2 h‑2 bg‑blue‑500 rounded‑full" />
+              <span className="text‑muted‑foreground">15 min ago</span>
               <span>New kidney registered from Mayo Clinic</span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-
-              <span className="text-muted-foreground">1 hour ago</span>
+            <div className="flex items‑center gap‑3">
+              <div className="w‑2 h‑2 bg‑yellow‑500 rounded‑full" />
+              <span className="text‑muted‑foreground">1 hour ago</span>
               <span>Transport initiated for liver to Cleveland Clinic</span>
             </div>
           </div>

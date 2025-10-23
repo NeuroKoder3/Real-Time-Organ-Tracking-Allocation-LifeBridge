@@ -1,3 +1,5 @@
+// client/src/hooks/useAuth.ts
+
 import { useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -25,7 +27,15 @@ export function useAuth() {
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
       try {
-        const userData = await api<User | null>("/auth/user");
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const token = stored ? (JSON.parse(stored) as User)?.token : undefined;
+
+        const userData = await api<User | null>("/auth/user", {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
         return userData ?? null;
       } catch (err) {
         console.warn("[useAuth] fetch user failed:", err);
@@ -52,11 +62,14 @@ export function useAuth() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!userData?.id || !userData?.email) {
+      if (!userData?.id || !userData?.email || !userData?.token) {
         throw new Error("Invalid login response");
       }
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...userData, token: userData.token }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ ...userData, token: userData.token })
+      );
 
       queryClient.setQueryData(AUTH_QUERY_KEY, userData);
       return userData;

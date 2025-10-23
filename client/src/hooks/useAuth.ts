@@ -56,7 +56,8 @@ export function useAuth() {
         throw new Error("Invalid login response");
       }
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...userData, token: userData.token }));
+
       queryClient.setQueryData(AUTH_QUERY_KEY, userData);
       return userData;
     },

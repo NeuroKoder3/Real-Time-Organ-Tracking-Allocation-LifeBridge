@@ -183,10 +183,25 @@ export default function Dashboard() {
   // Secure fetch wrapper
   const fetchWithAuth = async <T,>(url: string): Promise<T> => {
     const token = getAuthToken();
+    if (!token) {
+      // No token: we should navigate to login or handle unauthenticated state
+      toast({
+        title: "Not Authenticated",
+        description: "Please log in to access dashboard data.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      // Return a rejection so that react-query knows the query failed/should be disabled
+      return Promise.reject(new Error("No auth token"));
+    }
+
     const res = await fetch(`${API_BASE}${url}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       credentials: "include",
     });
+
     if (!res.ok) {
       toast({
         title: "Error Loading Data",
@@ -198,23 +213,38 @@ export default function Dashboard() {
     return res.json();
   };
 
-  // ✅ Queries
-  const { data: organs = [] } = useQuery({
+  // ✅ Queries – only defined if token exists (via useQuery’s enabled option)
+  const token = getAuthToken();
+
+  const { data: organs = [] } = useQuery<Organ[]>({
     queryKey: ["organs"],
     queryFn: () => fetchWithAuth<Organ[]>("/api/organs"),
-    refetchInterval: 30000, // auto-refresh every 30s
+    refetchInterval: 30000,
+    enabled: !!token, // only run if token truthy
   });
 
-  const { data: transports = [] } = useQuery({
+  const { data: transports = [] } = useQuery<Transport[]>({
     queryKey: ["transports"],
     queryFn: () => fetchWithAuth<Transport[]>("/api/transports"),
     refetchInterval: 30000,
+    enabled: !!token,
   });
 
-  const { data: recipients = [] } = useQuery({
+  const { data: recipients = [] } = useQuery<Recipient[]>({
     queryKey: ["recipients"],
     queryFn: () => fetchWithAuth<Recipient[]>("/api/recipients"),
+    enabled: !!token,
   });
+
+  // If no token, optionally render a placeholder or redirect (the navigate above will handle redirect)
+  if (!token) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-lg text-muted-foreground">You must log in to view this dashboard.</p>
+        <Button onClick={() => navigate("/login")}>Go to Login</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -423,6 +453,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+
               <span className="text-muted-foreground">1 hour ago</span>
               <span>Transport initiated for liver to Cleveland Clinic</span>
             </div>

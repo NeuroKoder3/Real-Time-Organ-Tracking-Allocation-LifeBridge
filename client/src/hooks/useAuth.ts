@@ -1,5 +1,3 @@
-// client/src/hooks/useAuth.ts
-
 import { useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -28,11 +26,16 @@ export function useAuth() {
     queryFn: async () => {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        const token = stored ? (JSON.parse(stored) as User)?.token : undefined;
+        const parsed = stored ? (JSON.parse(stored) as User) : null;
+
+        if (!parsed?.token) {
+          console.warn("[useAuth] No token found in localStorage");
+          return null;
+        }
 
         const userData = await api<User | null>("/auth/user", {
           headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            Authorization: `Bearer ${parsed.token}`,
           },
         });
 

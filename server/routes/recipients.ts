@@ -1,11 +1,14 @@
 import { Router } from "express";
 import type { Router as ExpressRouter, Request, Response } from "express";
-import authenticateToken from "../authMiddleware.js";
+import authenticateToken, {
+  AuthenticatedRequest,
+} from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
-router.options("/", (req: Request, res: Response) => {
+// CORS middleware for all requests on this router
+router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -14,9 +17,17 @@ router.options("/", (req: Request, res: Response) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.sendStatus(204);
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
 });
 
+/**
+ * GET /api/recipients
+ */
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const recipients = await storage.getRecipients();
@@ -27,12 +38,22 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-router.post("/", authenticateToken, async (req: Request, res: Response) => {
+/**
+ * POST /api/recipients
+ */
+router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { firstName, lastName, bloodType, organNeeded, hospital } = req.body;
 
     if (!firstName || !lastName || !organNeeded) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res
+        .status(400)
+        .json({ message: "Missing required fields: firstName, lastName, organNeeded" });
+    }
+
+    // Optional: restrict access based on user role
+    if (!["admin", "coordinator"].includes(req.user?.role || "")) {
+      return res.status(403).json({ message: "Insufficient permissions" });
     }
 
     const recipient = await storage.createRecipient({
@@ -41,8 +62,8 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
       bloodType,
       organNeeded,
       hospital,
-      location: "Unknown",
-      urgencyStatus: "medium",
+      location: "Unknown", // can be improved with actual geolocation later
+      urgencyStatus: "medium", // default urgency
       waitlistDate: new Date(),
     });
 

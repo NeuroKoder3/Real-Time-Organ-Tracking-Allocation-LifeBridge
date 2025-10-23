@@ -1,11 +1,14 @@
 import { Router } from "express";
 import type { Router as ExpressRouter, Request, Response } from "express";
-import authenticateToken from "../authMiddleware.js";
+import authenticateToken, {
+  AuthenticatedRequest,
+} from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
-router.options("/", (req: Request, res: Response) => {
+// Global CORS middleware (can be moved higher)
+router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -14,9 +17,18 @@ router.options("/", (req: Request, res: Response) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.sendStatus(204);
+
+  // For OPTIONS requests, end here
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
 });
 
+/**
+ * GET /api/organs
+ */
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const organs = await storage.getOrgans();
@@ -27,7 +39,10 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-router.post("/", authenticateToken, async (req: Request, res: Response) => {
+/**
+ * POST /api/organs
+ */
+router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
       donorId,
@@ -51,13 +66,23 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
         .json({ message: "Missing required fields: donorId, organType, bloodType" });
     }
 
+    // 🔐 Optional: Enforce roles allowed to register organs
+    if (!["admin", "coordinator"].includes(req.user?.role || "")) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+
+    console.log("[Organs] Authenticated user:", req.user);
+
     const resolvedViabilityHours = viabilityHours ? Number(viabilityHours) : 12;
     const resolvedPreservationStartTime = preservationStartTime
       ? new Date(preservationStartTime)
       : new Date();
     const resolvedViabilityDeadline = viabilityDeadline
       ? new Date(viabilityDeadline)
-      : new Date(resolvedPreservationStartTime.getTime() + resolvedViabilityHours * 60 * 60 * 1000);
+      : new Date(
+          resolvedPreservationStartTime.getTime() +
+            resolvedViabilityHours * 60 * 60 * 1000
+        );
 
     const organ = await storage.createOrgan({
       donorId,
@@ -86,6 +111,9 @@ router.post("/", authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * PUT /api/organs
+ */
 router.put("/", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id, ...updates } = req.body;

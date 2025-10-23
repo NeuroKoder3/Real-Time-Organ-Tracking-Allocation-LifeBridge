@@ -1,11 +1,14 @@
 import { Router } from "express";
 import type { Router as ExpressRouter, Request, Response } from "express";
-import authenticateToken from "../authMiddleware.js";
+import authenticateToken, {
+  AuthenticatedRequest,
+} from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
-router.options("/", (req: Request, res: Response) => {
+// Global CORS middleware
+router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -14,9 +17,17 @@ router.options("/", (req: Request, res: Response) => {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
-  res.sendStatus(204);
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
 });
 
+/**
+ * GET /api/allocations
+ */
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const allocations = await storage.getAllocations();
@@ -27,19 +38,31 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-router.post("/", authenticateToken, async (req: Request, res: Response) => {
+/**
+ * POST /api/allocations
+ */
+router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { organId, recipientId, courierId, status } = req.body;
 
     if (!organId || !recipientId) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res
+        .status(400)
+        .json({ message: "Missing required fields: organId, recipientId" });
     }
+
+    // Optional: restrict access based on user role
+    if (!["admin", "coordinator"].includes(req.user?.role || "")) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+
+    console.log("[Allocations] Creating by user:", req.user);
 
     const allocation = await storage.createAllocation({
       organId,
       recipientId,
       courierId,
-      matchScore: "1.0",
+      matchScore: "1.0", // Placeholder for future AI logic
       status: status ?? "proposed",
     });
 

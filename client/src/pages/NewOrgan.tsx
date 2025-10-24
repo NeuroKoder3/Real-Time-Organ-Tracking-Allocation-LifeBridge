@@ -26,7 +26,7 @@ export default function NewOrgan() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  console.log("USER FROM useAuth:", user); // ✅ Log user
+  console.log("USER FROM useAuth:", user);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -44,15 +44,26 @@ export default function NewOrgan() {
     setError(null);
 
     try {
+      // 🔄 Map frontend camelCase → backend snake_case
+      const backendPayload = {
+        organ_type: form.organType,
+        blood_type: form.bloodType,
+        donor_id: form.donorId,
+        current_location: form.currentLocation,
+        viability_hours: form.viabilityHours,
+      };
+
+      console.log("Submitting organ payload:", backendPayload);
+
       await fetchWithCsrf("/organs", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify(backendPayload),
       });
 
       navigate("/organs");
     } catch (err: any) {
       console.error("Failed to register organ:", err);
-      setError(err.message || "Submission failed");
+      setError(err.message || "Failed to create organ");
     } finally {
       setLoading(false);
     }

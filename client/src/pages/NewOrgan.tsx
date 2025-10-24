@@ -39,35 +39,35 @@ export default function NewOrgan() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    try {
-      // 🔄 Map frontend camelCase → backend snake_case
-      const backendPayload = {
-        organType: form.organType,
-        bloodType: form.bloodType,
-        donorId: form.donorId,
-        currentLocation: form.currentLocation,
-        viabilityHours: form.viabilityHours,
-      };
+  try {
+    if (!user?.id) throw new Error("User not authenticated");
 
-      console.log("Submitting organ payload:", backendPayload);
+    const backendPayload = {
+      organType: form.organType.trim(),
+      bloodType: form.bloodType.trim(),
+      donorId: form.donorId.trim(),
+      currentLocation: form.currentLocation.trim(),
+      viabilityHours: Number(form.viabilityHours),
+      registeredBy: user.id // ✅ REQUIRED FIELD
+    };
 
-      await fetchWithCsrf("/organs", {
-        method: "POST",
-        body: JSON.stringify(backendPayload),
-      });
+    await fetchWithCsrf("/organs", {
+      method: "POST",
+      body: JSON.stringify(backendPayload),
+    });
 
-      navigate("/organs");
-    } catch (err: any) {
-      console.error("Failed to register organ:", err);
-      setError(err.message || "Failed to create organ");
-    } finally {
-      setLoading(false);
-    }
-  };
+    navigate("/organs");
+  } catch (err: any) {
+    console.error("Failed to register organ:", err);
+    setError(err.message || "Failed to create organ");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="max-w-md mx-auto p-4">

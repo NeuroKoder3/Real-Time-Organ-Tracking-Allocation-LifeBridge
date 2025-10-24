@@ -24,7 +24,7 @@ const isProd = process.env.NODE_ENV === "production";
 // ---------------------------------------------------------
 const DEMO_EMAIL = "admin@lifebridge.dev";
 const DEMO_PASSWORD = "SuperSecure123!";
-const DEMO_USER_ID = "demo-user-id";
+const DEMO_USER_ID = "ea1502c0-2fed-46c5-80fb-837c6465c0f2";
 
 // ---------------------------------------------------------
 // Storage adapters

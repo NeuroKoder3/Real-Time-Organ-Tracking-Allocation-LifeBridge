@@ -44,7 +44,7 @@ export default function NewOrgan() {
     setError(null);
 
     try {
-      await fetchWithCsrf("/api/organs", {
+      await fetchWithCsrf("/organs", {
         method: "POST",
         body: JSON.stringify(form),
       });

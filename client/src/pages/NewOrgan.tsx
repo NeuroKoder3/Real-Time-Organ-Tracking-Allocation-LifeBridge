@@ -46,11 +46,11 @@ export default function NewOrgan() {
     try {
       // 🔄 Map frontend camelCase → backend snake_case
       const backendPayload = {
-        organ_type: form.organType,
-        blood_type: form.bloodType,
-        donor_id: form.donorId,
-        current_location: form.currentLocation,
-        viability_hours: form.viabilityHours,
+        organType: form.organType,
+        bloodType: form.bloodType,
+        donorId: form.donorId,
+        currentLocation: form.currentLocation,
+        viabilityHours: form.viabilityHours,
       };
 
       console.log("Submitting organ payload:", backendPayload);

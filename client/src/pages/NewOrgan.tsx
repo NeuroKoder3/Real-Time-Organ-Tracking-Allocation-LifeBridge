@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useApi } from "@/App"; // or wherever your ApiContext is
+import { useApi } from "@/App";
 import { useNavigate } from "react-router-dom";
-import useAuth from "@/hooks/useAuth"; // ✅ Import auth hook to get token
+import useAuth from "@/hooks/useAuth";
 
 interface OrganForm {
   organType: string;
@@ -22,10 +22,12 @@ const initialForm: OrganForm = {
 export default function NewOrgan() {
   const api = useApi();
   const navigate = useNavigate();
-  const { user } = useAuth(); // ✅ Grab user token
+  const { user } = useAuth();
   const [form, setForm] = useState<OrganForm>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  console.log("USER FROM useAuth:", user); // ✅ Log user
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -42,12 +44,18 @@ export default function NewOrgan() {
     setLoading(true);
     setError(null);
 
+    if (!user?.token) {
+      setError("Authentication token missing. Please log in again.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await api("/organs", {
+      const res = await api("/api/organs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${user?.token}`, // ✅ Set token header
+          Authorization: `Bearer ${user.token}`,
         },
         body: JSON.stringify(form),
       });

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useApi } from "@/App";
 import { useNavigate } from "react-router-dom";
 import useAuth from "@/hooks/useAuth";
+import { fetchWithCsrf } from "@/utils/fetchWithCsrf"; // ✅ CSRF-safe POST helper
 
 interface OrganForm {
   organType: string;
@@ -20,12 +20,13 @@ const initialForm: OrganForm = {
 };
 
 export default function NewOrgan() {
-  const api = useApi();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [form, setForm] = useState<OrganForm>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  console.log("USER FROM useAuth:", user); // ✅ Log user
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -42,28 +43,9 @@ export default function NewOrgan() {
     setLoading(true);
     setError(null);
 
-    if (!user?.token) {
-      setError("Authentication token missing. Please log in again.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      // 🔐 Fetch CSRF token from backend
-      const csrfRes = await fetch("https://api.lifebridge.online/api/csrf-token", {
-        method: "GET",
-        credentials: "include",
-      });
-      const { csrfToken } = await csrfRes.json();
-
-      // ✅ Make authenticated POST with CSRF token
-      const res = await api("/api/organs", {
+      await fetchWithCsrf("/api/organs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-          "X-CSRF-Token": csrfToken,
-        },
         body: JSON.stringify(form),
       });
 

@@ -47,12 +47,12 @@ export default function NewOrgan() {
     if (!user?.id) throw new Error("User not authenticated");
 
     const backendPayload = {
-      organType: form.organType.trim(),
-      bloodType: form.bloodType.trim(),
-      donorId: form.donorId.trim(),
-      currentLocation: form.currentLocation.trim(),
-      viabilityHours: Number(form.viabilityHours),
-      registeredBy: "6205a94d-7da2-4356-a901-759f87fe024a", // ✅ updated user ID
+      organ_type: form.organType.trim(),
+      blood_type: form.bloodType.trim(),
+      donor_id: form.donorId.trim(),
+      current_location: form.currentLocation.trim(),
+      viability_hours: Number(form.viabilityHours),
+      registered_by: user.id, // 👈 correct ID now
     };
 
 

@@ -36,7 +36,12 @@ export async function api<T = unknown>(
   }
 
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(options.body &&
+    !(options.body instanceof FormData) &&
+    !("Content-Type" in (options.headers || {}))
+      ? { "Content-Type": "application/json" }
+      : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   };
@@ -76,7 +81,7 @@ export async function api<T = unknown>(
       const text = await response.text();
       if (text) msg = text;
     } catch {
-      // fallback msg
+      // fallback message
     }
     console.error(`❌ [API] Error ${response.status}: ${msg}`);
     throw new Error(msg);

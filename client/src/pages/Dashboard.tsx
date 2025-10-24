@@ -17,24 +17,10 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import useAuth from "@/hooks/useAuth";
 import type { Organ, Recipient } from "@shared/schema";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
-
-// 🔒 Secure helpers
-async function getCsrfToken() {
-  try {
-    const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
-    const data = await res.json();
-    return data?.csrfToken;
-  } catch {
-    return undefined;
-  }
-}
-
-function getAuthToken() {
-  return localStorage.getItem("token");
-}
 
 interface Transport {
   id: string;
@@ -179,11 +165,17 @@ function StatsCard({
 export default function Dashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth(); // ← using useAuth
 
-  const token = getAuthToken();
+  if (isLoading) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        Loading dashboard...
+      </div>
+    );
+  }
 
-  // If no token, redirect (or show login prompt)
-  if (!token) {
+  if (!user?.token) {
     return (
       <div className="p-6 text-center">
         <p className="text-lg text-muted-foreground">You must log in to view this dashboard.</p>
@@ -192,51 +184,48 @@ export default function Dashboard() {
     );
   }
 
-  // Secure fetch wrapper
   const fetchWithAuth = async <T,>(url: string): Promise<T> => {
-    // token is guaranteed present here
     const res = await fetch(`${API_BASE}${url}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${user.token}`,
       },
       credentials: "include",
     });
 
     if (!res.ok) {
       if (res.status === 401) {
-        // token invalid or expired: clear & redirect
-        localStorage.removeItem("token");
+        toast({
+          title: "Session expired",
+          description: "Please log in again.",
+          variant: "destructive",
+        });
+        localStorage.removeItem("lifebridge_user");
         navigate("/login");
       }
-      toast({
-        title: "Error Loading Data",
-        description: `Failed to load ${url}`,
-        variant: "destructive",
-      });
-      throw new Error(await res.text());
+      throw new Error(`Failed to fetch ${url}: ${res.status}`);
     }
+
     return res.json();
   };
 
-  // ✅ Queries — only enabled if token exists
   const { data: organs = [] } = useQuery<Organ[]>({
     queryKey: ["organs"],
-    queryFn: () => fetchWithAuth<Organ[]>("/api/organs"),
+    queryFn: () => fetchWithAuth("/api/organs"),
     refetchInterval: 30000,
-    enabled: !!token,
+    enabled: !!user.token,
   });
 
   const { data: transports = [] } = useQuery<Transport[]>({
     queryKey: ["transports"],
-    queryFn: () => fetchWithAuth<Transport[]>("/api/transports"),
+    queryFn: () => fetchWithAuth("/api/transports"),
     refetchInterval: 30000,
-    enabled: !!token,
+    enabled: !!user.token,
   });
 
   const { data: recipients = [] } = useQuery<Recipient[]>({
     queryKey: ["recipients"],
-    queryFn: () => fetchWithAuth<Recipient[]>("/api/recipients"),
-    enabled: !!token,
+    queryFn: () => fetchWithAuth("/api/recipients"),
+    enabled: !!user.token,
   });
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import {
   CheckCircle,
   Plane,
   MessageSquare,
-  LucideIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +22,9 @@ type Feature = {
   title: string;
   description: string;
 };
+
+const DEMO_EMAIL = "admin@lifebridge.dev";
+const DEMO_PASSWORD = "SuperSecure123!";
 
 export default function Landing() {
   const { login } = useAuth();
@@ -75,7 +78,7 @@ export default function Landing() {
     "End-to-end transparency for all teams",
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setLoading(true);
@@ -85,7 +88,7 @@ export default function Landing() {
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-      navigate("/"); // ✅ Redirect to root instead of /dashboard
+      navigate("/"); // Redirect to root
     } catch {
       setError("Login failed. Please check your credentials or backend.");
       toast({
@@ -99,17 +102,17 @@ export default function Landing() {
   };
 
   const handleDemoLogin = async () => {
-    setEmail("admin@lifebridge.dev");
-    setPassword("SuperSecure123!");
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
     setError("");
     setLoading(true);
     try {
-      await login("admin@lifebridge.dev", "SuperSecure123!");
+      await login(DEMO_EMAIL, DEMO_PASSWORD);
       toast({
         title: "Demo Login Successful",
         description: "Welcome to the LifeBridge demo dashboard.",
       });
-      navigate("/"); // ✅ Redirect to root instead of /dashboard
+      navigate("/");
     } catch {
       setError("Demo login unavailable. Check backend API connection.");
       toast({
@@ -137,12 +140,12 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16 text-center flex-1">
+      <section className="container mx-auto px-4 py-16 text-center flex-1" aria-labelledby="hero-title">
         <div className="max-w-3xl mx-auto space-y-6">
           <Badge variant="outline" className="mb-4">
             Organ Transplant Coordination Platform
           </Badge>
-          <h1 className="text-5xl font-bold tracking-tight">
+          <h1 id="hero-title" className="text-5xl font-bold tracking-tight">
             Real-Time Organ Tracking
             <span className="text-primary block">& Allocation Platform</span>
           </h1>
@@ -167,6 +170,7 @@ export default function Landing() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="off"
                 />
                 <Input
                   type="password"
@@ -175,6 +179,7 @@ export default function Landing() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="off"
                 />
                 {error && (
                   <p className="text-red-600 text-sm text-center">{error}</p>
@@ -206,9 +211,9 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-16">
+      <section className="container mx-auto px-4 py-16" aria-labelledby="features-title">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Core Platform Features</h2>
+          <h2 id="features-title" className="text-3xl font-bold mb-4">Core Platform Features</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Empowering OPOs, transplant centers, and transport teams with
             cutting-edge coordination and analytics tools.
@@ -237,10 +242,10 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="bg-muted/30 py-16">
+      <section className="bg-muted/30 py-16" aria-labelledby="benefits-title">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-8">Expected Impact</h2>
+            <h2 id="benefits-title" className="text-3xl font-bold mb-8">Expected Impact</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-center gap-3">

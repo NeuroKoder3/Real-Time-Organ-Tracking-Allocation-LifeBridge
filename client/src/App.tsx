@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext } from "react";
 import { Routes, Route, Outlet } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,9 +22,11 @@ import TrackingPage from "@/pages/Tracking";
 import Messages from "@/pages/Messages";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
-import Labs from "@/pages/Labs"; // ✅ NEW IMPORT
+import Labs from "@/pages/Labs";
 
-type ApiOptions = RequestInit & { query?: Record<string, string | number | boolean> };
+type ApiOptions = RequestInit & {
+  query?: Record<string, string | number | boolean>;
+};
 
 const ApiContext = createContext<(path: string, opts?: ApiOptions) => Promise<any>>(
   async () => {
@@ -140,7 +142,9 @@ function AuthenticatedLayout() {
   );
 }
 
-function Router() {
+function App() {
+  const apiBase = (import.meta as any).env?.VITE_API_URL || DEFAULT_API_BASE;
+  const apiFetch = createApiFetch(apiBase);
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -155,37 +159,6 @@ function Router() {
   }
 
   return (
-    <Routes>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/" element={<Landing />} />
-          <Route path="*" element={<NotFound />} />
-        </>
-      ) : (
-        <Route path="/*" element={<AuthenticatedLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="organs" element={<Organs />} />
-          <Route path="organs/new" element={<NewOrgan />} />
-          <Route path="recipients" element={<Recipients />} />
-          <Route path="allocations" element={<Allocations />} />
-          <Route path="transport" element={<Transport />} />
-          <Route path="tracking" element={<TrackingPage />} />
-          <Route path="messages" element={<Messages />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="labs" element={<Labs />} /> {/* ✅ Labs route added */}
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      )}
-    </Routes>
-  );
-}
-
-function App() {
-  const apiBase = (import.meta as any).env?.VITE_API_URL || DEFAULT_API_BASE;
-  const apiFetch = createApiFetch(apiBase);
-
-  return (
     <QueryClientProvider client={queryClient}>
       <ApiContext.Provider value={apiFetch}>
         <ThemeProvider defaultTheme="light" storageKey="lifebridge-ui-theme">
@@ -197,7 +170,29 @@ function App() {
                 </div>
               }
             >
-              <Router />
+              <Routes>
+                {!isAuthenticated ? (
+                  <>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="*" element={<NotFound />} />
+                  </>
+                ) : (
+                  <Route path="/*" element={<AuthenticatedLayout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="organs" element={<Organs />} />
+                    <Route path="organs/new" element={<NewOrgan />} />
+                    <Route path="recipients" element={<Recipients />} />
+                    <Route path="allocations" element={<Allocations />} />
+                    <Route path="transport" element={<Transport />} />
+                    <Route path="tracking" element={<TrackingPage />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="reports" element={<Reports />} />
+                    <Route path="settings" element={<Settings />} />
+                    <Route path="labs" element={<Labs />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
+                )}
+              </Routes>
             </React.Suspense>
             <Toaster />
           </TooltipProvider>

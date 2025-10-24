@@ -1,4 +1,4 @@
-// server/middleware/authMiddleware.ts
+// server/authMiddleware.ts
 
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
@@ -52,30 +52,19 @@ export function authenticateToken(
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
-    if (!decoded?.sub) {
-      return res.status(403).json({ message: "Invalid token structure" });
-    }
-
     req.user = {
       claims: decoded,
-      role: decoded.role,
+      role: decoded?.role, // ✅ ensure role is always present here
     };
-
-    // Optional debug logging (safe in dev only)
-    if (process.env.NODE_ENV !== "production") {
-      console.log("✅ Authenticated user:", req.user);
-    }
 
     return next();
   } catch (err: any) {
     if (err?.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Token expired" });
     }
-
-    console.warn("❌ JWT verification failed:", err);
     return res.status(403).json({ message: "Invalid token" });
   }
 }
 
-// Default export for compatibility with `import foo from ".../authMiddleware"`
+// Default export for compatibility
 export default authenticateToken;

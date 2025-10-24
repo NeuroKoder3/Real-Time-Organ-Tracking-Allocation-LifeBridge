@@ -1,13 +1,13 @@
+// server/routes/organs.ts
+
 import { Router } from "express";
 import type { Router as ExpressRouter, Request, Response } from "express";
-import authenticateToken, {
-  AuthenticatedRequest,
-} from "../authMiddleware.js";
+import authenticateToken, { AuthenticatedRequest } from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
 const router: ExpressRouter = Router();
 
-// Global CORS middleware (can be moved higher)
+// Global CORS middleware
 router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
@@ -18,7 +18,6 @@ router.use((req: Request, res: Response, next) => {
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
 
-  // For OPTIONS requests, end here
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
   }
@@ -66,8 +65,10 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
         .json({ message: "Missing required fields: donorId, organType, bloodType" });
     }
 
-    // 🔐 Optional: Enforce roles allowed to register organs
-    if (!["admin", "coordinator"].includes(req.user?.role || "")) {
+    // ✅ Fix: pull role from claims fallback if needed
+    const userRole = req.user?.role || req.user?.claims?.role;
+
+    if (!["admin", "coordinator"].includes(userRole || "")) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
 

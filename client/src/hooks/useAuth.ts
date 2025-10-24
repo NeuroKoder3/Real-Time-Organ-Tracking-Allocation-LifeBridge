@@ -11,11 +11,6 @@ interface User {
   token?: string;
 }
 
-interface LoginResponse {
-  user: Omit<User, "token">;
-  token: string;
-}
-
 interface CsrfResponse {
   csrfToken: string;
 }
@@ -26,7 +21,6 @@ const AUTH_QUERY_KEY = ["/auth/user"];
 export function useAuth() {
   const queryClient = useQueryClient();
 
-  // Fetch user if token exists
   const { data: user, isLoading } = useQuery<User | null>({
     queryKey: AUTH_QUERY_KEY,
     queryFn: async () => {
@@ -49,7 +43,17 @@ export function useAuth() {
           return null;
         }
 
-        return { ...userData, token: parsed.token }; // Preserve token
+        // 🔧 Reattach token to keep it available
+        const userWithToken: User = {
+          ...userData,
+          token: parsed.token,
+        };
+
+        // Update localStorage and cache
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(userWithToken));
+        queryClient.setQueryData(AUTH_QUERY_KEY, userWithToken);
+
+        return userWithToken;
       } catch (err) {
         console.warn("[useAuth] fetch user failed:", err);
         return null;
@@ -66,8 +70,7 @@ export function useAuth() {
         throw new Error("CSRF token missing");
       }
 
-      // 👇 THIS IS THE FIX
-      const res = await api<LoginResponse>("/auth/login", {
+      const userData = await api<User>("/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -76,19 +79,14 @@ export function useAuth() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!res?.user || !res?.token) {
+      if (!userData?.id || !userData?.email || !userData?.token) {
         throw new Error("Invalid login response");
       }
 
-      const userWithToken: User = {
-        ...res.user,
-        token: res.token,
-      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      queryClient.setQueryData(AUTH_QUERY_KEY, userData);
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userWithToken));
-      queryClient.setQueryData(AUTH_QUERY_KEY, userWithToken);
-
-      return userWithToken;
+      return userData;
     },
     [queryClient]
   );

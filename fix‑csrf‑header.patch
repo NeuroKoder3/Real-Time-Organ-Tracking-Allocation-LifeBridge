@@ -1,0 +1,59 @@
+diff --git a/client/src/utils/fetchWithCsrf.ts b/client/src/utils/fetchWithCsrf.ts
+index abcdef1..abcdef2 100644
+--- a/client/src/utils/fetchWithCsrf.ts
++++ b/client/src/utils/fetchWithCsrf.ts
+@@ -1,6 +1,11 @@
+-export async function fetchWithCsrf(path: string, options: RequestInit = {}) {
++export async function fetchWithCsrf(path: string, options: RequestInit = {}) {
+   const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || "https://api.lifebridge.online/api";
+
++  // 🐞 debug: fetch CSRF token
+   const csrfRes = await fetch(`${baseUrl}/csrf-token`, {
+     credentials: "include",
+   });
++
++  console.log("🔐 [CSRF] fetched token:", await csrfRes.clone().json().then(r => r.csrfToken));
++
+   if (!csrfRes.ok) {
+     throw new Error("Failed to fetch CSRF token");
+   }
+
+@@ -20,7 +25,7 @@ export async function fetchWithCsrf(path: string, options: RequestInit = {}) {
+   const { csrfToken } = await csrfRes.json();
+
+-  const headers: HeadersInit = {
++  const headers: HeadersInit = {
+     Accept: "application/json",
+     ...(options.body &&
+     !(options.body instanceof FormData) &&
+@@ -29,6 +34,7 @@ export async function fetchWithCsrf(path: string, options: RequestInit = {}) {
+     ...(options.headers ?? {}),
+     "X-CSRF-Token": csrfToken,
++    "x-csrf-token": csrfToken, // ✅ ensure lowercase header
+   };
+
+   const finalOptions: RequestInit = {
+diff --git a/client/src/pages/NewOrgan.tsx b/client/src/pages/NewOrgan.tsx
+index abcdef3..abcdef4 100644
+--- a/client/src/pages/NewOrgan.tsx
++++ b/client/src/pages/NewOrgan.tsx
+@@ -10,6 +10,10 @@ import { fetchWithCsrf } from "@/utils/fetchWithCsrf"; // ✅ CSRF‑safe POST helper
+ export default function NewOrgan() {
+   const navigate = useNavigate();
+   const { user } = useAuth();
++  console.log("🔍 [Auth] user object:", user);
++
++  // optional: debug cookie & header before submit
++  console.log("🔍 [Cookie] _csrf:", document.cookie.split('; ').find(c => c.startsWith('_csrf=')));
+ 
+   const handleChange = (
+     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+@@ -48,6 +52,10 @@ export default function NewOrgan() {
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+     setLoading(true);
++    console.log("🔍 [Submit] form data:", form);
++    console.log("🔍 [Submit] user.token:", user?.token);
+     setError(null);
+
+     try {

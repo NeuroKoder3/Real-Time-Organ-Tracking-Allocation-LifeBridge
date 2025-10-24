@@ -368,10 +368,37 @@ export class DatabaseStorage implements IStorage {
     return organsList;
   }
 
-  async createOrgan(organData: InsertOrgan): Promise<Organ> {
-    const [organ] = await db.insert(organs).values(organData).returning();
+async createOrgan(organData: InsertOrgan): Promise<Organ> {
+  try {
+    const mappedData = {
+      donor_id: organData.donorId,
+      organ_type: organData.organType,
+      blood_type: organData.bloodType,
+      condition: organData.condition ?? "healthy",
+      status: organData.status ?? "available",
+      viability_hours: organData.viabilityHours,
+      preservation_start_time: organData.preservationStartTime,
+      viability_deadline: organData.viabilityDeadline,
+      current_location: organData.currentLocation,
+      temperature: organData.temperature ?? 4.0,
+      preservation_solution: organData.preservationSolution ?? "UW Solution",
+      quality_score: organData.qualityScore ?? "A",
+      biopsy_results: organData.biopsyResults ?? {},
+      crossmatch_data: organData.crossmatchData ?? {},
+      created_at: new Date(),
+    };
+
+    const [organ] = await db
+  .insert(organs)
+  .values(mappedData as any)
+  .returning();
     return organ;
+  } catch (err) {
+    console.error("[Storage] createOrgan DB error:", err);
+    throw err;
   }
+}
+
 
   async updateOrgan(id: string, updates: Partial<InsertOrgan>): Promise<Organ> {
     const [organ] = await db

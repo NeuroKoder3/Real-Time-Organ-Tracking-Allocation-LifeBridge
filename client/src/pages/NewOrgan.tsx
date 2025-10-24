@@ -27,8 +27,6 @@ export default function NewOrgan() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  console.log("USER FROM useAuth:", user); // ✅ Log user
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -51,17 +49,24 @@ export default function NewOrgan() {
     }
 
     try {
+      // 🔐 Fetch CSRF token from backend
+      const csrfRes = await fetch("https://api.lifebridge.online/api/csrf-token", {
+        method: "GET",
+        credentials: "include",
+      });
+      const { csrfToken } = await csrfRes.json();
+
+      // ✅ Make authenticated POST with CSRF token
       const res = await api("/api/organs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${user.token}`,
-          "X-CSRF-Token": user.csrfToken || "", // ✅ Send CSRF token
+          "X-CSRF-Token": csrfToken,
         },
         body: JSON.stringify(form),
       });
 
-      // react-query's api wrapper returns parsed JSON directly
       navigate("/organs");
     } catch (err: any) {
       console.error("Failed to register organ:", err);

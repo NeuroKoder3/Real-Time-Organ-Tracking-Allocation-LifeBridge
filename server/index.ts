@@ -1,5 +1,3 @@
-// ✅ Lifebridge Server — Final CORS-Stable Build + Health Route Fix
-
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
@@ -32,6 +30,7 @@ else console.warn("⚠️  .env file not found.");
 
 import "./config/env.js";
 
+// ✅ Required env
 const requiredEnv = [
   "DATABASE_URL",
   "JWT_SECRET",
@@ -48,6 +47,9 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 const isProd = process.env.NODE_ENV === "production";
 
+// ✅ Trust proxy (needed for secure cookies behind proxy)
+app.set("trust proxy", 1);
+
 /* ---------------------------------------------------------
    ✅ CORS FIX — Always First
 --------------------------------------------------------- */
@@ -61,7 +63,6 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
 ];
 
-// ✅ Apply universal CORS headers early
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin || "";
   if (allowedOrigins.includes(origin)) {
@@ -144,10 +145,19 @@ if (process.env.NODE_ENV !== "test") {
     return csrfMiddleware(req, res, next);
   });
 
+  // ✅ Modified route to return CSRF token and also set cookie for SPA use
   app.get("/api/csrf-token", (req: Request, res: Response) => {
     try {
       const token = (req as any).csrfToken?.();
       if (!token) throw new Error("CSRF token missing");
+
+      // ⚠️ Set a second readable CSRF cookie for SPA compatibility
+      res.cookie("XSRF-TOKEN", token, {
+        httpOnly: false,
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+      });
+
       res.status(200).json({ csrfToken: token });
     } catch (err) {
       console.error("[CSRF] Failed to generate token:", err);

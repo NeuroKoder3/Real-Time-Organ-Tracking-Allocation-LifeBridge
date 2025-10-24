@@ -52,8 +52,9 @@ export default function NewOrgan() {
       donorId: form.donorId.trim(),
       currentLocation: form.currentLocation.trim(),
       viabilityHours: Number(form.viabilityHours),
-      registeredBy: user.id // ✅ REQUIRED FIELD
+      registeredBy: "6205a94d-7da2-4356-a901-759f87fe024a", // ✅ updated user ID
     };
+
 
     await fetchWithCsrf("/organs", {
       method: "POST",

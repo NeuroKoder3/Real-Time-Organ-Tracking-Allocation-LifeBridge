@@ -9,6 +9,7 @@ interface User {
   lastName?: string;
   role?: string;
   token?: string;
+  csrfToken?: string; // ✅ Add this line
 }
 
 interface CsrfResponse {

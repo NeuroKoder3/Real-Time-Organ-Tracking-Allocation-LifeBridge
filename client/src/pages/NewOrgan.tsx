@@ -56,14 +56,12 @@ export default function NewOrgan() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${user.token}`,
+          "X-CSRF-Token": user.csrfToken || "", // ✅ Send CSRF token
         },
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) {
-        throw new Error(`API request failed: ${res.status}`);
-      }
-
+      // react-query's api wrapper returns parsed JSON directly
       navigate("/organs");
     } catch (err: any) {
       console.error("Failed to register organ:", err);

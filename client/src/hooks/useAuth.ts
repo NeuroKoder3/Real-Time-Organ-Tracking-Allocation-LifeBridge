@@ -11,6 +11,11 @@ interface User {
   token?: string;
 }
 
+interface LoginResponse {
+  user: Omit<User, "token">;
+  token: string;
+}
+
 interface CsrfResponse {
   csrfToken: string;
 }
@@ -29,25 +34,22 @@ export function useAuth() {
         const stored = localStorage.getItem(STORAGE_KEY);
         const parsed = stored ? (JSON.parse(stored) as User) : null;
 
-        // Prevent calling the API when no token is found
         if (!parsed?.token) {
           return null;
         }
 
-        // Verify user with server
         const userData = await api<User | null>("/auth/user", {
           headers: {
             Authorization: `Bearer ${parsed.token}`,
           },
         });
 
-        // If server invalidates token, clear stored user
         if (!userData) {
           localStorage.removeItem(STORAGE_KEY);
           return null;
         }
 
-        return userData;
+        return { ...userData, token: parsed.token }; // Preserve token
       } catch (err) {
         console.warn("[useAuth] fetch user failed:", err);
         return null;
@@ -56,21 +58,16 @@ export function useAuth() {
     retry: false,
   });
 
-  /**
-   * Handles user login flow.
-   * Fetches CSRF token, authenticates, and saves user info.
-   */
   const login = useCallback(
     async (email: string, password: string): Promise<User> => {
-      // Fetch CSRF token for login
       const csrfRes = await api<CsrfResponse>("/csrf-token");
       const csrfToken = csrfRes?.csrfToken;
       if (!csrfToken?.trim()) {
         throw new Error("CSRF token missing");
       }
 
-      // Authenticate
-      const userData = await api<User>("/auth/login", {
+      // 👇 THIS IS THE FIX
+      const res = await api<LoginResponse>("/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,24 +76,23 @@ export function useAuth() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!userData?.id || !userData?.email || !userData?.token) {
+      if (!res?.user || !res?.token) {
         throw new Error("Invalid login response");
       }
 
-      // Store user and token locally
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      const userWithToken: User = {
+        ...res.user,
+        token: res.token,
+      };
 
-      // Update cached user in React Query
-      queryClient.setQueryData(AUTH_QUERY_KEY, userData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userWithToken));
+      queryClient.setQueryData(AUTH_QUERY_KEY, userWithToken);
 
-      return userData;
+      return userWithToken;
     },
     [queryClient]
   );
 
-  /**
-   * Logs the user out and clears all auth state.
-   */
   const logout = useCallback(async () => {
     try {
       const csrfRes = await api<CsrfResponse>("/csrf-token");
@@ -115,19 +111,14 @@ export function useAuth() {
       console.warn("[useAuth] logout error:", err);
     }
 
-    // Clear storage and cache
     localStorage.removeItem(STORAGE_KEY);
     queryClient.setQueryData(AUTH_QUERY_KEY, null);
 
-    // Redirect to home or login
     if (window.location.pathname !== "/") {
       window.location.assign("/");
     }
   }, [queryClient]);
 
-  /**
-   * Rehydrate user from localStorage if not yet loaded.
-   */
   useEffect(() => {
     if (!user) {
       const stored = localStorage.getItem(STORAGE_KEY);

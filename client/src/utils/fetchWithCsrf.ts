@@ -19,7 +19,7 @@ export async function fetchWithCsrf(path: string, options: RequestInit = {}) {
       ? { "Content-Type": "application/json" }
       : {}),
     ...(options.headers ?? {}),
-    "X-CSRF-Token": csrfToken,
+    "x-csrf-token": csrfToken,
   };
 
   const finalOptions: RequestInit = {

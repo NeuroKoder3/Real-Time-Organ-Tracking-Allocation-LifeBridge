@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useApi } from "@/App"; // or wherever your ApiContext is
 import { useNavigate } from "react-router-dom";
+import useAuth from "@/hooks/useAuth"; // ✅ Import auth hook to get token
 
 interface OrganForm {
   organType: string;
@@ -8,7 +9,6 @@ interface OrganForm {
   donorId: string;
   currentLocation: string;
   viabilityHours: number;
-  // add others as needed
 }
 
 const initialForm: OrganForm = {
@@ -22,6 +22,7 @@ const initialForm: OrganForm = {
 export default function NewOrgan() {
   const api = useApi();
   const navigate = useNavigate();
+  const { user } = useAuth(); // ✅ Grab user token
   const [form, setForm] = useState<OrganForm>(initialForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,11 +41,21 @@ export default function NewOrgan() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
-      await api("/organs", {
+      const res = await api("/organs", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user?.token}`, // ✅ Set token header
+        },
         body: JSON.stringify(form),
       });
+
+      if (!res.ok) {
+        throw new Error(`API request failed: ${res.status}`);
+      }
+
       navigate("/organs");
     } catch (err: any) {
       console.error("Failed to register organ:", err);

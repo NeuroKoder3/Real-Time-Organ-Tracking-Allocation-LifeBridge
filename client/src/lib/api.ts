@@ -1,5 +1,6 @@
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || "https://api.lifebridge.online/api";
+  import.meta.env.VITE_API_BASE_URL?.trim() ||
+  "https://api.lifebridge.online/api";
 
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);
@@ -36,29 +37,37 @@ export async function api<T = unknown>(
     console.warn("⚠️ Could not parse stored user:", err);
   }
 
-  // 🧠 Merge headers
-  const headers: HeadersInit = {
-    Accept: "application/json",
-    ...(options.body &&
+  // ✅ Build real Headers object (fixes Authorization not attaching)
+  const headers = new Headers(options.headers || {});
+
+  // 🔐 Set Authorization header if token exists
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  // 🧠 Ensure JSON content type if applicable
+  if (
+    options.body &&
     !(options.body instanceof FormData) &&
-    !("Content-Type" in (options.headers || {}))
-      ? { "Content-Type": "application/json" }
-      : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers ?? {}),
-  };
+    !headers.has("Content-Type")
+  ) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  headers.set("Accept", "application/json");
 
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include", // send cookies if needed (e.g. CSRF)
+    credentials: "include", // needed for CSRF cookies
   };
 
   // 📡 Compose full URL
   const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
   if (import.meta.env.DEV) {
-    console.log("📡 [API] Fetching:", fullUrl, fetchOptions);
+    console.log("📡 [API] Fetching:", fullUrl);
+    console.log("➡️ [API] Headers:", Array.from(headers.entries()));
   }
 
   let response: Response;
@@ -69,18 +78,18 @@ export async function api<T = unknown>(
     throw new Error("Network error: Unable to reach backend server.");
   }
 
-  // 🔐 Auth errors
+  // 🔐 Handle 401 Unauthorized
   if (response.status === 401) {
     console.warn("[API] 401 Unauthorized");
     throw new Error("Unauthorized");
   }
 
-  // 🟡 No content
+  // 🟡 Handle no-content responses
   if (response.status === 204 || response.status === 304) {
     return {} as T;
   }
 
-  // 🔴 Other server errors
+  // 🔴 Handle other server errors
   if (!response.ok) {
     let msg = `HTTP ${response.status}`;
     try {
@@ -93,7 +102,7 @@ export async function api<T = unknown>(
     throw new Error(msg);
   }
 
-  // ✅ Success
+  // ✅ Parse JSON safely
   const data = await safeJsonParse<T>(response);
   return data ?? ({} as T);
 }

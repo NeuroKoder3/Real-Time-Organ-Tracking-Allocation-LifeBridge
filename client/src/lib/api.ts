@@ -31,7 +31,8 @@ export async function api<T = unknown>(
     const stored = localStorage.getItem("lifebridge_user");
     if (stored) {
       const parsed = JSON.parse(stored);
-      token = parsed?.token;
+      token = parsed?.token || parsed?.access_token || parsed?.claims?.token || parsed?.claims?.access_token;
+
     }
   } catch (err) {
     console.warn("⚠️ Could not parse stored user:", err);

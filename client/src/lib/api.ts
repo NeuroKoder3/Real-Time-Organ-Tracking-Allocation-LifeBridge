@@ -1,6 +1,6 @@
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() ||
-  "https://api.lifebridge.online/api";
+  "https://real-time-organ-tracking-allocation.onrender.com/api";
 
 if (import.meta.env.DEV) {
   console.log("🧪 [API] BASE_URL:", BASE_URL);

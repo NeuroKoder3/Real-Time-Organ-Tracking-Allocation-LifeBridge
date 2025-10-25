@@ -1,5 +1,4 @@
 // server/routes/organs.ts
-
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import authenticateToken, { AuthenticatedRequest } from "../authMiddleware.js";
 import { storage } from "../storage.js";
@@ -7,9 +6,7 @@ import csurf from "csurf";
 
 const router = Router();
 
-/* ---------------------------------------------------------
-   ✅ Setup CSRF Protection Middleware
---------------------------------------------------------- */
+// ✅ CSRF middleware
 const csrfProtection = csurf({
   cookie: {
     httpOnly: true,
@@ -18,12 +15,9 @@ const csrfProtection = csurf({
   },
 }) as unknown as RequestHandler;
 
-// ✅ Apply CSRF protection to all routes in this router
 router.use(csrfProtection);
 
-/* ---------------------------------------------------------
-   ✅ Global CORS Middleware
---------------------------------------------------------- */
+// ✅ CORS headers
 router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
@@ -41,9 +35,7 @@ router.use((req: Request, res: Response, next) => {
   next();
 });
 
-/* ---------------------------------------------------------
-   ✅ GET /api/organs
---------------------------------------------------------- */
+// ✅ GET /api/organs
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const organs = await storage.getOrgans();
@@ -54,9 +46,7 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-/* ---------------------------------------------------------
-   ✅ POST /api/organs
---------------------------------------------------------- */
+// ✅ POST /api/organs
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
@@ -76,30 +66,19 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
     } = req.body;
 
     if (!donorId || !organType || !bloodType) {
-      return res
-        .status(400)
-        .json({ message: "Missing required fields: donorId, organType, bloodType" });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // ✅ Fix: pull role from claims fallback if needed
     const userRole = req.user?.role || req.user?.claims?.role;
-
     if (!["admin", "coordinator"].includes(userRole || "")) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
 
-    console.log("[Organs] Authenticated user:", req.user);
-
-    const resolvedViabilityHours = viabilityHours ? Number(viabilityHours) : 12;
-    const resolvedPreservationStartTime = preservationStartTime
-      ? new Date(preservationStartTime)
-      : new Date();
+    const resolvedViabilityHours = Number(viabilityHours) || 12;
+    const resolvedPreservationStartTime = new Date(preservationStartTime || Date.now());
     const resolvedViabilityDeadline = viabilityDeadline
       ? new Date(viabilityDeadline)
-      : new Date(
-          resolvedPreservationStartTime.getTime() +
-            resolvedViabilityHours * 60 * 60 * 1000
-        );
+      : new Date(resolvedPreservationStartTime.getTime() + resolvedViabilityHours * 3600000);
 
     const organ = await storage.createOrgan({
       donorId,
@@ -128,23 +107,17 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-/* ---------------------------------------------------------
-   ✅ PUT /api/organs
---------------------------------------------------------- */
+// ✅ PUT /api/organs
 router.put("/", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id, ...updates } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ message: "Missing organ ID for update" });
-    }
+    if (!id) return res.status(400).json({ message: "Missing organ ID" });
 
     const organ = await storage.updateOrgan(id, updates);
-    if (!organ) {
-      return res.status(404).json({ message: "Organ not found" });
-    }
+    if (!organ) return res.status(404).json({ message: "Organ not found" });
 
-    res.json({ message: "Organ updated successfully", organ });
+    res.json({ message: "Organ updated", organ });
   } catch (error) {
     console.error("[Organs] PUT error:", error);
     res.status(500).json({ message: "Failed to update organ" });

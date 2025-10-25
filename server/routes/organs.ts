@@ -1,13 +1,29 @@
 // server/routes/organs.ts
 
-import { Router } from "express";
-import type { Router as ExpressRouter, Request, Response } from "express";
+import { Router, type Request, type Response, type RequestHandler } from "express";
 import authenticateToken, { AuthenticatedRequest } from "../authMiddleware.js";
 import { storage } from "../storage.js";
+import csurf from "csurf";
 
-const router: ExpressRouter = Router();
+const router = Router();
 
-// Global CORS middleware
+/* ---------------------------------------------------------
+   ✅ Setup CSRF Protection Middleware
+--------------------------------------------------------- */
+const csrfProtection = csurf({
+  cookie: {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    secure: process.env.NODE_ENV === "production",
+  },
+}) as unknown as RequestHandler;
+
+// ✅ Apply CSRF protection to all routes in this router
+router.use(csrfProtection);
+
+/* ---------------------------------------------------------
+   ✅ Global CORS Middleware
+--------------------------------------------------------- */
 router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
@@ -15,7 +31,7 @@ router.use((req: Request, res: Response, next) => {
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token"
   );
 
   if (req.method === "OPTIONS") {
@@ -25,9 +41,9 @@ router.use((req: Request, res: Response, next) => {
   next();
 });
 
-/**
- * GET /api/organs
- */
+/* ---------------------------------------------------------
+   ✅ GET /api/organs
+--------------------------------------------------------- */
 router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   try {
     const organs = await storage.getOrgans();
@@ -38,9 +54,9 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
-/**
- * POST /api/organs
- */
+/* ---------------------------------------------------------
+   ✅ POST /api/organs
+--------------------------------------------------------- */
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
@@ -112,9 +128,9 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-/**
- * PUT /api/organs
- */
+/* ---------------------------------------------------------
+   ✅ PUT /api/organs
+--------------------------------------------------------- */
 router.put("/", authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id, ...updates } = req.body;

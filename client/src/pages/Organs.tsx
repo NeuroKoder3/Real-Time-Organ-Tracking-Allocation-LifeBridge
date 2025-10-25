@@ -32,8 +32,21 @@ async function getCsrfToken() {
 }
 
 function getAuthToken() {
-  return localStorage.getItem("token");
+  try {
+    const stored = localStorage.getItem("lifebridge_user");
+    if (!stored) return undefined;
+    const parsed = JSON.parse(stored);
+    return (
+      parsed?.token || 
+      parsed?.access_token || 
+      parsed?.claims?.token || 
+      parsed?.claims?.access_token
+    );
+  } catch {
+    return undefined;
+  }
 }
+
 
 function OrganCard({
   organ,

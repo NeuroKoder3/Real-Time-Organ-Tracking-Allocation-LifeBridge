@@ -370,6 +370,11 @@ export class DatabaseStorage implements IStorage {
 
 async createOrgan(organData: InsertOrgan): Promise<Organ> {
   try {
+    const preservationStartTime = new Date(organData.preservationStartTime);
+    const viabilityDeadline =
+      organData.viabilityDeadline ??
+      new Date(preservationStartTime.getTime() + organData.viabilityHours * 60 * 60 * 1000).toISOString();
+
     const mappedData = {
       donor_id: organData.donorId,
       organ_type: organData.organType,
@@ -378,7 +383,7 @@ async createOrgan(organData: InsertOrgan): Promise<Organ> {
       status: organData.status ?? "available",
       viability_hours: organData.viabilityHours,
       preservation_start_time: organData.preservationStartTime,
-      viability_deadline: organData.viabilityDeadline,
+      viability_deadline: viabilityDeadline,
       current_location: organData.currentLocation,
       temperature: organData.temperature ?? 4.0,
       preservation_solution: organData.preservationSolution ?? "UW Solution",
@@ -389,15 +394,17 @@ async createOrgan(organData: InsertOrgan): Promise<Organ> {
     };
 
     const [organ] = await db
-  .insert(organs)
-  .values(mappedData as any)
-  .returning();
+      .insert(organs)
+      .values(mappedData as any)
+      .returning();
+
     return organ;
   } catch (err) {
     console.error("[Storage] createOrgan DB error:", err);
     throw err;
   }
 }
+
 
 
   async updateOrgan(id: string, updates: Partial<InsertOrgan>): Promise<Organ> {

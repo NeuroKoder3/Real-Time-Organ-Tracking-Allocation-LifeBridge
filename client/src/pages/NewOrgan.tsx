@@ -46,14 +46,14 @@ export default function NewOrgan() {
   try {
     if (!user?.id) throw new Error("User not authenticated");
 
-    const backendPayload = {
-      organ_type: form.organType.trim(),
-      blood_type: form.bloodType.trim(),
-      donor_id: form.donorId.trim(),
-      current_location: form.currentLocation.trim(),
-      viability_hours: Number(form.viabilityHours),
-      registered_by: user.id, // 👈 correct ID now
-    };
+  const backendPayload = {
+    organType: form.organType.trim(),
+    bloodType: form.bloodType.trim(),
+    donorId: form.donorId.trim(),
+    currentLocation: form.currentLocation.trim(),
+    viabilityHours: Number(form.viabilityHours),
+    registeredBy: user.id, // ✅ confirmed valid user ID
+  };
 
 
     await fetchWithCsrf("/organs", {

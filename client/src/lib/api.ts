@@ -24,6 +24,7 @@ export async function api<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  // 🔐 Grab token from localStorage
   let token: string | undefined;
   try {
     const stored = localStorage.getItem("lifebridge_user");
@@ -35,6 +36,7 @@ export async function api<T = unknown>(
     console.warn("⚠️ Could not parse stored user:", err);
   }
 
+  // 🧠 Merge headers
   const headers: HeadersInit = {
     Accept: "application/json",
     ...(options.body &&
@@ -49,9 +51,10 @@ export async function api<T = unknown>(
   const fetchOptions: RequestInit = {
     ...options,
     headers,
-    credentials: "include",
+    credentials: "include", // send cookies if needed (e.g. CSRF)
   };
 
+  // 📡 Compose full URL
   const fullUrl = `${BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
   if (import.meta.env.DEV) {
@@ -66,15 +69,18 @@ export async function api<T = unknown>(
     throw new Error("Network error: Unable to reach backend server.");
   }
 
+  // 🔐 Auth errors
   if (response.status === 401) {
     console.warn("[API] 401 Unauthorized");
     throw new Error("Unauthorized");
   }
 
+  // 🟡 No content
   if (response.status === 204 || response.status === 304) {
     return {} as T;
   }
 
+  // 🔴 Other server errors
   if (!response.ok) {
     let msg = `HTTP ${response.status}`;
     try {
@@ -87,6 +93,7 @@ export async function api<T = unknown>(
     throw new Error(msg);
   }
 
+  // ✅ Success
   const data = await safeJsonParse<T>(response);
   return data ?? ({} as T);
 }

@@ -1,10 +1,11 @@
 // server/routes/organs.ts
 import { Router, type Request, type Response, type RequestHandler } from "express";
+import type { Router as ExpressRouter } from "express";
 import authenticateToken, { AuthenticatedRequest } from "../authMiddleware.js";
 import { storage } from "../storage.js";
 import csurf from "csurf";
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // ✅ CSRF middleware
 const csrfProtection = csurf({

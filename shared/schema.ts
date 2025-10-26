@@ -18,6 +18,13 @@ import { z } from "zod";
 /*                                  ENUMS                                     */
 /* -------------------------------------------------------------------------- */
 
+export const organConditionEnum = pgEnum("organ_condition", [
+  "healthy",
+  "unhealthy",
+  "unknown",
+]);
+
+
 export const userRoleEnum = pgEnum("user_role", [
   "admin",
   "coordinator",
@@ -176,7 +183,8 @@ export const organs = pgTable(
       .notNull(),
     organType: varchar("organ_type").notNull(),
     bloodType: varchar("blood_type").notNull(),
-    condition: varchar("condition"),
+    condition: organConditionEnum("condition").notNull().default("healthy"),
+
     status: organStatusEnum("status").notNull().default("available"),
     viabilityHours: integer("viability_hours").notNull(),
     preservationStartTime: timestamp("preservation_start_time", { withTimezone: true }).notNull(),

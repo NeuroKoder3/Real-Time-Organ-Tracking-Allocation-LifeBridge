@@ -1,0 +1,225 @@
+[33mcommit 016400257740c55f1856d88560b8ec3a3fc80296[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 21:43:17 2025 -0500
+
+    Fix: sync pnpm-lock.yaml after Drizzle updates
+
+[33mcommit cf224cc13764660c3335bb9be95cd39248cdfc1d[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 21:38:25 2025 -0500
+
+    Update Drizzle config, schema, and dependencies
+
+[33mcommit c2de8055b7783f5819f7ed19ead6a2b6581fcbe6[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 20:24:40 2025 -0500
+
+    Update database schema
+
+[33mcommit 920a37f60ae74617cc5bfea491ea6fbd7bcc892b[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 19:21:59 2025 -0500
+
+    Fix enum and schema issues for organ condition, update drizzle schema
+
+[33mcommit 05603b0d113392e6996c0b9d62e3ed4482132946[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 19:04:09 2025 -0500
+
+    Fix: Use existing organ_condition enum and update organ creation
+
+[33mcommit 4926297468d773c2dc2fae2611b71a0f8bf1b552[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 18:43:46 2025 -0500
+
+    🐛 Fix: auto-calculate viability_deadline in createOrgan to prevent 500 error
+
+[33mcommit f4bac840981cab44dc37d12a109046f39f552bcb[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 18:27:47 2025 -0500
+
+    🔐 Fix token extraction from localStorage in getAuthToken
+
+[33mcommit 7845e18ba3dc9b92c155619792910445d8093787[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 17:38:21 2025 -0500
+
+    🔧 Fix token attachment in API headers
+
+[33mcommit 1d88cea61801e8314a5dc24e27516bcd1dda68af[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 17:22:05 2025 -0500
+
+    🔧 Update production API URL and fix token auth header in api.ts
+
+[33mcommit 310b4edd6969c0d2080bae5375475a42ac502a2d[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 17:13:06 2025 -0500
+
+    🔐 Fix Authorization header injection in api.ts using Headers object
+
+[33mcommit d07db1e147b714407a70218b2404493c4c32fb3c[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 16:55:19 2025 -0500
+
+    🔐 Inject Authorization token in api.ts for authenticated API calls
+
+[33mcommit 7f79f534c546cbf5f321a9fe69ebf5f97d56b013[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 15:40:59 2025 -0500
+
+    🐛 Fix TS2742 type inference error: added explicit Router type annotation
+
+[33mcommit e84c6f40cf778e760613410ad7cdf5c186f68c95[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 15:37:13 2025 -0500
+
+    🔥 Fix auth and organ routes: secure JWT, CSRF, CORS, and client login flow
+
+[33mcommit 05dc629055aea5bdb9dcf680ae06d8c2cf134001[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Sat Oct 25 15:22:49 2025 -0500
+
+    🔒 Add CSRF protection to organs routes and fix CORS headers
+
+[33mcommit 881027263e98b78ca275b76adc6d8a74c5236404[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 23:47:24 2025 -0500
+
+    fix: move vite to dependencies for production build
+
+[33mcommit d583fdb9764ddcdceeb7d77835e32df38e0e1e04[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 22:55:03 2025 -0500
+
+    fix: add vite as dev dependency
+
+[33mcommit b7c73090deada0e07d15e95ad7386e305d1014f8[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 19:14:15 2025 -0500
+
+    Fix: use correct user ID for registeredBy in organ registration
+
+[33mcommit 719a17bab48dbe301b7aa51fb96e7ed57c25f022[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 18:59:23 2025 -0500
+
+    Fix: use correct user ID for registeredBy in organ registration
+
+[33mcommit 2b191bbd650998056f175e306a5a4e3e0e4e061e[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 18:17:19 2025 -0500
+
+    Fix: use correct user ID for registeredBy in organ registration
+
+[33mcommit 97bf41df06ab66a047c6405942bf20ca480eaacf[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 17:53:17 2025 -0500
+
+    Fix organ registration: add registeredBy and trim input fields
+
+[33mcommit a6fff3e1e1d5c8d378a7a305c5a99b1f3c085165[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 17:25:05 2025 -0500
+
+    Fix: map camelCase to snake_case columns in createOrgan() and resolve DB insert error
+
+[33mcommit 94e9fb49306034983b271c4e2b0d0b9494562499[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 17:12:32 2025 -0500
+
+    Fix: mapped frontend form fields to backend snake_case in NewOrgan component
+
+[33mcommit fe7532a2fc0988136ca1091c96134b735aad817c[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 17:02:48 2025 -0500
+
+    Fix: mapped frontend form fields to backend snake_case in NewOrgan component
+
+[33mcommit 2b642942905e68c8dd008ce5357f0d312f8aecec[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 16:33:49 2025 -0500
+
+    Fix: attach JWT and CSRF headers in fetchWithCsrf helper for secure API calls
+
+[33mcommit a69983a25ac24c99a41f1d8b75756b15f25f0a66[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 16:25:01 2025 -0500
+
+    Fix CSRF header casing + add debug logs for CSRF & auth
+
+[33mcommit 7395ca2f73148439f72d1809263390c0c743ade0[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 16:14:03 2025 -0500
+
+    Fix CSRF header casing to lowercase for compatibility with server
+
+[33mcommit 294e70967dee621749e0d15907b11a6118c16114[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 16:03:11 2025 -0500
+
+    🐛 Fix: Correct duplicate /api path in organ registration API call
+
+[33mcommit 701ee54acd4b4867644cbefee903be7b8b65a214[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 15:57:40 2025 -0500
+
+    ✅ Add fetchWithCsrf utility and update secure API call
+
+[33mcommit 5ddcbdb040f42c4e49dfc78be0e4fc21906b6e17[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 15:42:53 2025 -0500
+
+    🐛 Fix CSRF token fetch and include in organ registration
+
+[33mcommit a31a6024e2e082cdd13729460df1587281b53adf[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 13:56:34 2025 -0500
+
+    Add csrfToken to User type and fix CSRF header in organ registration
+
+[33mcommit 05a0773302d43733a5a5ab6a9b91e6d911264d72[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 13:46:02 2025 -0500
+
+    Fix auth role propagation and 403 error in organ route
+
+[33mcommit 36519c118a444a1d216db320ff426e3cef8b84ca[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 13:39:52 2025 -0500
+
+    🔐 Fix: Decode and attach user role correctly in JWT auth middleware
+
+[33mcommit e5d78d04897a64751a0dd53cef9f8ff232d9f239[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 11:37:11 2025 -0500
+
+    🔐 Fix: Store token correctly after login in useAuth hook
+
+[33mcommit e37fdb0460673f1d449fc15b474c6fba3e512004[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 11:29:18 2025 -0500
+
+    🔐 Fix: Store token correctly after login in useAuth hook
+
+[33mcommit eb6547db963bd7485954c71563ecb5d411b57f6c[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 11:22:00 2025 -0500
+
+    🔐 Fix: Prevent API request with undefined token in organ registration
+
+[33mcommit 7d04cf11345ad81e763ad42425954464997c81af[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 11:09:23 2025 -0500
+
+    🐛 Fix: Add Authorization header to organ registration API request
+
+[33mcommit 5d3d0f542c01b56c2a7e75b44fcdc80fb80e43ca[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 01:30:15 2025 -0500
+
+    🐛 Fix API utility: ensure proper token handling and content-type
+
+[33mcommit 1eae926784b8b0982adc9cf205089d76ca0feba6[m
+Author: NeuroKoder3 <nicmgildehaus83@outlook.com>
+Date:   Fri Oct 24 01:17:13 2

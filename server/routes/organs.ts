@@ -47,6 +47,7 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
   }
 });
 
+
 // ✅ POST /api/organs
 router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -56,31 +57,30 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       bloodType,
       condition,
       viabilityHours,
-      preservationStartTime,
-      viabilityDeadline,
       currentLocation,
-      temperature,
-      preservationSolution,
-      qualityScore,
-      biopsyResults,
-      crossmatchData,
+      hlaMarkers,
+      specialRequirements,
+      patientMRN,
+      patientDOB,
+      patientGender,
+      hospitalName,
     } = req.body;
 
+    // Basic required field check
     if (!donorId || !organType || !bloodType) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // Role-based authorization
     const userRole = req.user?.role || req.user?.claims?.role;
     if (!["admin", "coordinator"].includes(userRole || "")) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
 
+    // Resolve defaults
     const resolvedViabilityHours = Number(viabilityHours) || 12;
-    const resolvedPreservationStartTime = new Date(preservationStartTime || Date.now());
-    const resolvedViabilityDeadline = viabilityDeadline
-      ? new Date(viabilityDeadline)
-      : new Date(resolvedPreservationStartTime.getTime() + resolvedViabilityHours * 3600000);
 
+    // Create organ in DB
     const organ = await storage.createOrgan({
       donorId,
       organType,
@@ -88,14 +88,13 @@ router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Respo
       condition: condition ?? "healthy",
       status: "available",
       viabilityHours: resolvedViabilityHours,
-      preservationStartTime: resolvedPreservationStartTime,
-      viabilityDeadline: resolvedViabilityDeadline,
       currentLocation: currentLocation ?? "Unknown",
-      temperature: temperature ?? 4.0,
-      preservationSolution: preservationSolution ?? "UW Solution",
-      qualityScore: qualityScore ?? "A",
-      biopsyResults: biopsyResults ?? {},
-      crossmatchData: crossmatchData ?? {},
+      HLAmarkers: hlaMarkers, // schema uses 'HLAmakers' key
+      specialRequirements,
+      patientMRN,
+      patientDOB,
+      patientGender,
+      hospitalName,
     });
 
     res.status(201).json({

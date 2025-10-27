@@ -344,37 +344,32 @@ export class DatabaseStorage implements IStorage {
 
   // ========== ORGAN OPERATIONS ==========
 
-  async getOrgans(): Promise<Organ[]> {
-    const organsList = await db.select().from(organs).orderBy(desc(organs.createdAt));
-    return organsList;
-  }
+async getOrgans(): Promise<Organ[]> {
+  const organsList = await db.select().from(organs).orderBy(desc(organs.createdAt));
+  return organsList;
+}
 
-  async getOrgan(id: string): Promise<Organ | undefined> {
-    const [organ] = await db.select().from(organs).where(eq(organs.id, id));
-    return organ;
-  }
+async getOrgan(id: string): Promise<Organ | undefined> {
+  const [organ] = await db.select().from(organs).where(eq(organs.id, id));
+  return organ;
+}
 
-  async getAvailableOrgans(): Promise<Organ[]> {
-    const avail = await db
-      .select()
-      .from(organs)
-      .where(eq(organs.status, "available"))
-      .orderBy(organs.viabilityDeadline);
-    return avail;
-  }
+async getAvailableOrgans(): Promise<Organ[]> {
+  const avail = await db
+    .select()
+    .from(organs)
+    .where(eq(organs.status, "available"))
+    .orderBy(organs.viabilityHours); // ✅ updated from viabilityDeadline
+  return avail;
+}
 
-  async getOrgansByDonor(donorId: string): Promise<Organ[]> {
-    const organsList = await db.select().from(organs).where(eq(organs.donorId, donorId));
-    return organsList;
-  }
+async getOrgansByDonor(donorId: string): Promise<Organ[]> {
+  const organsList = await db.select().from(organs).where(eq(organs.donorId, donorId));
+  return organsList;
+}
 
 async createOrgan(organData: InsertOrgan): Promise<Organ> {
   try {
-    const preservationStartTime = new Date(organData.preservationStartTime);
-    const viabilityDeadline =
-      organData.viabilityDeadline ??
-      new Date(preservationStartTime.getTime() + organData.viabilityHours * 60 * 60 * 1000).toISOString();
-
     const mappedData = {
       donor_id: organData.donorId,
       organ_type: organData.organType,
@@ -382,14 +377,13 @@ async createOrgan(organData: InsertOrgan): Promise<Organ> {
       condition: organData.condition ?? "healthy",
       status: organData.status ?? "available",
       viability_hours: organData.viabilityHours,
-      preservation_start_time: organData.preservationStartTime,
-      viability_deadline: viabilityDeadline,
       current_location: organData.currentLocation,
-      temperature: organData.temperature ?? 4.0,
-      preservation_solution: organData.preservationSolution ?? "UW Solution",
-      quality_score: organData.qualityScore ?? "A",
-      biopsy_results: organData.biopsyResults ?? {},
-      crossmatch_data: organData.crossmatchData ?? {},
+      hla_markers: organData.HLAmarkers, // ✅ match schema's field name
+      special_requirements: organData.specialRequirements,
+      patient_mrn: organData.patientMRN,
+      patient_dob: organData.patientDOB,
+      patient_gender: organData.patientGender,
+      hospital_name: organData.hospitalName,
       created_at: new Date(),
     };
 
@@ -405,16 +399,15 @@ async createOrgan(organData: InsertOrgan): Promise<Organ> {
   }
 }
 
+async updateOrgan(id: string, updates: Partial<InsertOrgan>): Promise<Organ> {
+  const [organ] = await db
+    .update(organs)
+    .set({ ...updates, updatedAt: new Date() })
+    .where(eq(organs.id, id))
+    .returning();
+  return organ;
+}
 
-
-  async updateOrgan(id: string, updates: Partial<InsertOrgan>): Promise<Organ> {
-    const [organ] = await db
-      .update(organs)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(organs.id, id))
-      .returning();
-    return organ;
-  }
 
   // ========== ALLOCATION OPERATIONS ==========
 

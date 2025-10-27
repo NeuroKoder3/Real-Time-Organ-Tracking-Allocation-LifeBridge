@@ -178,23 +178,27 @@ export const organs = pgTable(
   "organs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+
     donorId: uuid("donor_id")
       .references(() => donors.id, { onDelete: "cascade" })
       .notNull(),
+
     organType: varchar("organ_type").notNull(),
     bloodType: varchar("blood_type").notNull(),
     condition: organConditionEnum("condition").notNull().default("healthy"),
 
     status: organStatusEnum("status").notNull().default("available"),
     viabilityHours: integer("viability_hours").notNull(),
-    preservationStartTime: timestamp("preservation_start_time", { withTimezone: true }).notNull(),
-    viabilityDeadline: timestamp("viability_deadline", { withTimezone: true }).notNull(),
     currentLocation: varchar("current_location"),
-    temperature: decimal("temperature", { precision: 4, scale: 2 }),
-    preservationSolution: varchar("preservation_solution"),
-    qualityScore: varchar("quality_score"),
-    biopsyResults: jsonb("biopsy_results"),
-    crossmatchData: jsonb("crossmatch_data"),
+
+    HLAmarkers: varchar("hla_markers"),
+    specialRequirements: varchar("special_requirements"),
+
+    patientMRN: varchar("patient_mrn"),
+    patientDOB: timestamp("patient_dob", { withTimezone: false }),
+    patientGender: varchar("patient_gender"),
+    hospitalName: varchar("hospital_name"),
+
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -203,6 +207,7 @@ export const organs = pgTable(
     index("idx_organs_blood_type").on(table.bloodType),
   ]
 );
+
 
 /* -------------------------------------------------------------------------- */
 /*                                 Allocations                                */
@@ -474,9 +479,10 @@ export interface UIRecipient extends Recipient {
 }
 
 export interface UIOrgan extends Organ {
-  hlaMarkers?: string;
-  specialRequirements?: string;
+  specialRequirements: string | null;
+  hlaMarkers?: string; // optional UI field is fine if not in base
 }
+
 
 
 

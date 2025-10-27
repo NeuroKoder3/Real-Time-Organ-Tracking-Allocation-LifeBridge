@@ -156,7 +156,8 @@ function TransportCard({
         <div className="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            Pickup: {format(new Date(transport.scheduledPickup), "MMM dd, HH:mm")}
+            Pickup: {format(new Date(transport.scheduledPickup ?? ""), "MMM dd, HH:mm")}
+
           </span>
           {transport.actualPickup && (
             <span>Actual: {format(new Date(transport.actualPickup), "HH:mm")}</span>
@@ -299,8 +300,9 @@ export default function TransportPage() {
   const filteredTransports = enhancedTransports.filter((t) => {
     const matchesSearch =
       t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.originLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.destinationLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.originLocation ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.destinationLocation ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+
       t.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || t.status === filterStatus;
     const matchesMode = filterMode === "all" || t.transportMode === filterMode;

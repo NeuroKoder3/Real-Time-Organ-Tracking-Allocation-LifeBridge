@@ -57,50 +57,7 @@ function OrganCard({
   onEdit: (organ: Organ) => void;
   onDelete: (id: string) => void;
 }) {
-  const [timeRemaining, setTimeRemaining] = useState("");
-  const [urgency, setUrgency] = useState<"normal" | "warning" | "critical">("normal");
 
-  useEffect(() => {
-    const tick = () => {
-      if (!organ.preservationStartTime) return;
-      const start = new Date(organ.preservationStartTime).getTime();
-      const elapsed = (Date.now() - start) / 36e5;
-      const remaining = organ.viabilityHours - elapsed;
-      if (remaining <= 0) {
-        setUrgency("critical");
-        setTimeRemaining("EXPIRED");
-      } else if (remaining < 2) {
-        setUrgency("critical");
-        setTimeRemaining(`${Math.floor(remaining)}h ${Math.floor((remaining % 1) * 60)}m`);
-      } else if (remaining < 4) {
-        setUrgency("warning");
-        setTimeRemaining(`${Math.floor(remaining)}h ${Math.floor((remaining % 1) * 60)}m`);
-      } else {
-        setUrgency("normal");
-        setTimeRemaining(`${Math.floor(remaining)}h`);
-      }
-    };
-    tick();
-    const i = setInterval(tick, 60000);
-    return () => clearInterval(i);
-  }, [organ]);
-
-  const progress =
-    organ.preservationStartTime
-      ? Math.max(
-          0,
-          Math.min(
-            100,
-            ((organ.viabilityHours -
-              ((Date.now() - new Date(organ.preservationStartTime).getTime()) / 36e5)) /
-              organ.viabilityHours) *
-              100
-          )
-        )
-      : 100;
-
-  const badgeColor =
-    urgency === "critical" ? "destructive" : urgency === "warning" ? "secondary" : "default";
 
   return (
     <Card>
@@ -109,13 +66,10 @@ function OrganCard({
           <Heart className="h-5 w-5 text-primary" />
           <CardTitle className="text-lg">{organ.organType}</CardTitle>
         </div>
-        <Badge variant={badgeColor}>
-          <Clock className="h-3 w-3 mr-1" />
-          {timeRemaining}
-        </Badge>
+        
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
-        <Progress value={progress} />
+        
         <div className="grid grid-cols-2 gap-3">
           <div>
             <p className="text-muted-foreground">Donor</p>

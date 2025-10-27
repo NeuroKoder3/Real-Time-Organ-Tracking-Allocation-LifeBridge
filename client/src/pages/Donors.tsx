@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { Donor as APIDonor } from "@shared/schema";
 import type { DonorCardProps } from "@/components/DonorCard";
-
+import { useEffect } from "react";
 // ---------------------------------------------------
 // 🌐 API Helpers
 // ---------------------------------------------------
@@ -66,22 +66,27 @@ export default function Donors() {
 
   // Query donors securely
   const {
-    data: donors = [],
-    isLoading,
-    isError,
-    error,
-  } = useQuery<APIDonor[]>({
-    queryKey: ["/api/donors"],
-    queryFn: () => fetchWithAuth<APIDonor[]>("/api/donors"),
-    refetchInterval: 60000, // refresh every 1 min
-    onError: (err: any) => {
-      toast({
-        title: "Error Loading Donors",
-        description: err?.message ?? "Unable to load donors from the server.",
-        variant: "destructive",
-      });
-    },
-  });
+   data: donors = [],
+   isLoading,
+   isError,
+   error,
+} = useQuery<APIDonor[], Error>({
+  queryKey: ["/api/donors"],
+  queryFn: () => fetchWithAuth<APIDonor[]>("/api/donors"),
+  refetchInterval: 60000, // refresh every 1 min
+});
+
+// Optional: handle error with toast
+useEffect(() => {
+  if (isError && error) {
+    toast({
+      title: "Error Loading Donors",
+      description: error.message ?? "Unable to load donors from the server.",
+      variant: "destructive",
+    });
+  }
+}, [isError, error]);
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");

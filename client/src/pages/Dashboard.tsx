@@ -34,52 +34,7 @@ interface Transport {
 // ----------------------------
 // Organ Viability Card
 // ----------------------------
-function OrganViabilityCard({ organ }: { organ: Organ }) {
-  const totalHours = organ.viabilityHours;
-  const elapsedHours = Math.floor(
-    (Date.now() - new Date(organ.preservationStartTime).getTime()) / (1000 * 60 * 60)
-  );
-  const remainingHours = totalHours - elapsedHours;
-  const progressPercentage = Math.max(0, Math.min(100, (remainingHours / totalHours) * 100));
 
-  const urgencyColor: "default" | "secondary" | "destructive" =
-    remainingHours < 2 ? "destructive" : remainingHours < 4 ? "secondary" : "default";
-
-  return (
-    <Card className="hover-elevate">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base">{organ.organType}</CardTitle>
-          </div>
-          <Badge variant={urgencyColor}>{remainingHours}h remaining</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Progress value={progressPercentage} className="h-2" />
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <p className="text-muted-foreground">Blood Type</p>
-            <p className="font-medium">{organ.bloodType}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Location</p>
-            <p className="font-medium">{organ.currentLocation ?? "Unknown"}</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-between pt-2">
-          <Badge variant="outline" className="text-xs">
-            {organ.status}
-          </Badge>
-          <Button size="sm" data-testid={`button-allocate-${organ.id}`}>
-            Allocate
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 // ----------------------------
 // Transport Card
@@ -261,41 +216,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Critical Alerts */}
-      <Card className="border-destructive/50 bg-destructive/5">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            <CardTitle>Critical Alerts</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {organs
-              .filter((o) => {
-                const elapsed =
-                  (Date.now() - new Date(o.preservationStartTime).getTime()) / (1000 * 60 * 60);
-                return o.viabilityHours - elapsed < 2;
-              })
-              .map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center justify-between p-3 bg-background rounded-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <Clock className="h‑4 w‑4 text‑destructive" />
-                    <span className="text-sm">
-                      {o.organType} at {o.currentLocation ?? "Unknown"} — Critical viability
-                    </span>
-                  </div>
-                  <Button size="sm" variant="destructive">
-                    Urgent Allocate
-                  </Button>
-                </div>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
+      
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -329,29 +250,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Available Organs Grid */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Available Organs</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Organs ready for allocation with viability timers
-              </p>
-            </div>
-            <Button variant="outline" size="sm">
-              View All
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {organs.map((organ) => (
-              <OrganViabilityCard key={organ.id} organ={organ} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Transports and Recipients */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

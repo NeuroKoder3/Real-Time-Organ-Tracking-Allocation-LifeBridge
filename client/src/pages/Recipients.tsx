@@ -342,7 +342,8 @@ export default function Recipients() {
     }
   };
 
-  const filteredRecipients = recipients.filter((r) => {
+  const filteredRecipients = recipients.filter((r: UiRecipient) => {
+
     const matchesSearch =
       r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.medicalId ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -495,7 +496,8 @@ export default function Recipients() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {recipients.filter((r) => r.urgencyLevel === "critical").length}
+              {recipients.filter((r: UiRecipient) => r.status === "matched").length}
+
             </div>
           </CardContent>
         </Card>
@@ -505,7 +507,8 @@ export default function Recipients() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {recipients.filter((r) => r.status === "active").length}
+              {recipients.filter((r: UiRecipient) => r.status === "matched").length}
+
             </div>
           </CardContent>
         </Card>
@@ -515,7 +518,8 @@ export default function Recipients() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {recipients.filter((r) => r.status === "matched").length}
+              {recipients.filter((r: UiRecipient) => r.status === "matched").length}
+
             </div>
           </CardContent>
         </Card>
@@ -536,7 +540,7 @@ export default function Recipients() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRecipients.map((recipient) => (
+          {filteredRecipients.map((recipient: UiRecipient) => (
             <RecipientCard
               key={recipient.id}
               recipient={recipient}

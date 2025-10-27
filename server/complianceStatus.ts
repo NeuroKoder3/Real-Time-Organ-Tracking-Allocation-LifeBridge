@@ -1,21 +1,15 @@
 // server/complianceStatus.ts
-// Endpoint to check system readiness
-
 import { Router, type Request, type Response } from "express";
+import { runComplianceChecks } from "./compliance.js";
 
-// Be compatible with either a named or default export from ./compliance
-import * as complianceModule from "./compliance.js";
-const runComplianceChecks: () => Promise<unknown> =
-  (complianceModule as any).runComplianceChecks ??
-  (complianceModule as any).default;
 
-const router: Router = Router(); // Explicit type
+const router: Router = Router();
 
 router.get("/status", async (_req: Request, res: Response) => {
   try {
     if (typeof runComplianceChecks !== "function") {
       throw new Error(
-        "runComplianceChecks export not found in ./compliance.js (expected named export `runComplianceChecks` or a default function export)."
+        "runComplianceChecks is not a function. Expected a named export."
       );
     }
 

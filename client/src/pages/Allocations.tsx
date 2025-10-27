@@ -490,7 +490,7 @@ export default function Allocations() {
 
       {/* Allocations grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filtered.map((allocation) => (
+        {(filtered as Allocation[]).map((allocation) => (
           <AllocationCard
             key={allocation.id}
             allocation={allocation}

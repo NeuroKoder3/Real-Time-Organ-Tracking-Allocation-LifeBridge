@@ -231,18 +231,25 @@ export default function Recipients() {
   });
 
   const { data: recipients = [], isLoading } = useQuery({
-    queryKey: ["recipients"],
-    queryFn: async () => {
-      const token = getAuthToken();
-      const res = await fetch(`${API_BASE}/api/recipients`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to fetch recipients");
-      const data = await res.json();
-      return data.map(mapRecipient);
-    },
-  });
+  queryKey: ["recipients"],
+  queryFn: async () => {
+    const token = getAuthToken();
+    const csrf = await getCsrfToken();
+
+    const res = await fetch(`${API_BASE}/api/recipients`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+      },
+      credentials: "include",
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch recipients");
+    const data = await res.json();
+    return data.map(mapRecipient);
+  },
+});
+
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {

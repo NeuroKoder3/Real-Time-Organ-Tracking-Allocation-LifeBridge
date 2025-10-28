@@ -33,7 +33,7 @@ import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { Recipient as DbRecipient } from "@shared/schema";
-
+import api from "@/lib/api"; // ensure this is at the top
 const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
 
 // 🔒 Get CSRF token
@@ -233,19 +233,7 @@ export default function Recipients() {
   const { data: recipients = [], isLoading } = useQuery({
   queryKey: ["recipients"],
   queryFn: async () => {
-    const token = getAuthToken();
-    const csrf = await getCsrfToken();
-
-    const res = await fetch(`${API_BASE}/api/recipients`, {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(csrf ? { "X-CSRF-Token": csrf } : {}),
-      },
-      credentials: "include",
-    });
-
-    if (!res.ok) throw new Error("Failed to fetch recipients");
-    const data = await res.json();
+    const data = await api<DbRecipient[]>("/recipients");
     return data.map(mapRecipient);
   },
 });

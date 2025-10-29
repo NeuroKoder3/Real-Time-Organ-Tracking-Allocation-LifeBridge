@@ -32,182 +32,50 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { Recipient as DbRecipient } from "@shared/schema";
-import api from "@/lib/api"; // ensure this is at the top
-const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
+import api from "@/lib/api";
+import type { Recipient } from "@shared/schema";
 
-// 🔒 Get CSRF token
-async function getCsrfToken() {
-  try {
-    const res = await fetch(`${API_BASE}/api/csrf-token`, { credentials: "include" });
-    const data = await res.json();
-    return data?.csrfToken;
-  } catch {
-    return undefined;
-  }
-}
-
-// 🔑 Get JWT token
-function getAuthToken() {
-  return localStorage.getItem("token");
-}
-
-// ----------------------------
-// Local types
-// ----------------------------
-type MedicalData = {
-  conditions?: string[] | string;
-  compatibilityScore?: number;
-};
 
 type UiRecipient = {
   id: string;
-  name: string;
-  medicalId?: string;
+  unosId?: string;
+  firstName?: string;
+  lastName?: string;
   bloodType: string;
   organNeeded: string;
-  urgencyLevel: string;
-  waitListDate?: string;
+  urgencyStatus: string;
+  waitlistDate?: string;
+  location?: string;
   hospital?: string;
-  hlaMarkers?: string;
+  hospitalId?: string;
+  status: string;
   medicalConditions?: string;
   compatibilityScore?: number;
-  status: string;
 };
 
-// ----------------------------
-// Map DB → UI recipient
-// ----------------------------
-function mapRecipient(r: DbRecipient): UiRecipient {
-  const medicalData = (r.medicalData || {}) as MedicalData;
-
-  let medicalConditions: string | undefined;
-  if (Array.isArray(medicalData.conditions)) {
-    medicalConditions = medicalData.conditions.join(", ");
-  } else if (typeof medicalData.conditions === "string") {
-    medicalConditions = medicalData.conditions;
-  }
+function mapRecipient(r: Recipient): UiRecipient {
+  const medicalData = (r.medicalData || {}) as any;
 
   return {
     id: r.id,
-    name: `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() || "Unnamed",
-    medicalId: r.unosId ?? undefined,
+    unosId: r.unosId ?? undefined,
+    firstName: r.firstName ?? "",
+    lastName: r.lastName ?? "",
     bloodType: r.bloodType,
     organNeeded: r.organNeeded,
-    urgencyLevel: r.urgencyStatus,
-    waitListDate: r.waitlistDate?.toString(),
-    hospital: r.hospitalId ?? undefined,
-    hlaMarkers: r.hlaType ? JSON.stringify(r.hlaType) : undefined,
-    medicalConditions,
-    compatibilityScore: medicalData.compatibilityScore,
+    urgencyStatus: r.urgencyStatus,
+    waitlistDate: r.waitlistDate?.toString(),
+    location: r.location ?? "",
+    hospital: r.hospital ?? "",
+    hospitalId: r.hospitalId ?? "",
     status: r.status,
+    medicalConditions: Array.isArray(medicalData?.conditions)
+      ? medicalData.conditions.join(", ")
+      : typeof medicalData?.conditions === "string"
+      ? medicalData.conditions
+      : undefined,
+    compatibilityScore: medicalData?.compatibilityScore,
   };
-}
-
-// ----------------------------
-// Recipient Card Component
-// ----------------------------
-function RecipientCard({
-  recipient,
-  onEdit,
-  onDelete,
-}: {
-  recipient: UiRecipient;
-  onEdit: (recipient: UiRecipient) => void;
-  onDelete: (id: string) => void;
-}) {
-  const urgencyColors: Record<string, "default" | "secondary" | "destructive"> = {
-    critical: "destructive",
-    urgent: "secondary",
-    routine: "default",
-  };
-
-  const statusColors: Record<string, "default" | "secondary" | "outline"> = {
-    active: "default",
-    inactive: "outline",
-    matched: "secondary",
-  };
-
-  return (
-    <Card className="hover-elevate">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <User className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">{recipient.name}</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant={urgencyColors[recipient.urgencyLevel] ?? "default"}>
-              {recipient.urgencyLevel}
-            </Badge>
-            <Badge variant={statusColors[recipient.status] ?? "outline"}>
-              {recipient.status}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-muted-foreground">Medical ID</p>
-            <p className="font-medium font-mono">{recipient.medicalId ?? "N/A"}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Blood Type</p>
-            <Badge variant="outline">{recipient.bloodType}</Badge>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Organ Needed</p>
-            <p className="font-medium flex items-center gap-1">
-              <Heart className="h-3 w-3" />
-              {recipient.organNeeded}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Wait Time</p>
-            <p className="font-medium">
-              {recipient.waitListDate
-                ? `${Math.floor(
-                    (Date.now() - new Date(recipient.waitListDate).getTime()) / 86400000
-                  )} days`
-                : "N/A"}
-            </p>
-          </div>
-        </div>
-
-        {recipient.medicalConditions && (
-          <div className="p-2 bg-muted/50 rounded-md">
-            <p className="text-xs text-muted-foreground flex items-start gap-1">
-              <Activity className="h-3 w-3 mt-0.5" />
-              <span>{recipient.medicalConditions}</span>
-            </p>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            Listed:{" "}
-            {recipient.waitListDate
-              ? format(new Date(recipient.waitListDate), "MMM dd, yyyy")
-              : "N/A"}
-          </span>
-          <span>{recipient.hospital ?? "Unknown"}</span>
-        </div>
-
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => onEdit(recipient)}>
-            <Edit className="h-3 w-3 mr-1" />
-            Edit
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => onDelete(recipient.id)}>
-            <Trash2 className="h-3 w-3 mr-1" />
-            Remove
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 // ----------------------------
@@ -222,43 +90,41 @@ export default function Recipients() {
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
 
   const [formData, setFormData] = useState({
-    name: "",
+    unosId: "",
+    firstName: "",
+    lastName: "",
     bloodType: "",
     organNeeded: "",
-    urgencyLevel: "routine",
+    urgencyStatus: "routine",
+    waitlistDate: new Date().toISOString().slice(0, 16),
+    location: "",
     hospital: "",
-    status: "active",
+    hospitalId: "",
+    status: "waiting",
   });
 
   const { data: recipients = [], isLoading } = useQuery({
-  queryKey: ["recipients"],
-  queryFn: async () => {
-    const data = await api<DbRecipient[]>("/recipients");
-    return Array.isArray(data) ? data.map(mapRecipient) : [];
-  },
-  gcTime: 0,                  // 👈 React Query v5 uses gcTime instead of cacheTime
-  staleTime: 0,
-  refetchOnWindowFocus: true,
-});
-
-
+    queryKey: ["recipients"],
+    queryFn: async () => {
+      const data = await api<Recipient[]>("/recipients");
+      return Array.isArray(data) ? data.map(mapRecipient) : [];
+    },
+    gcTime: 0,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const token = getAuthToken();
-      const csrf = await getCsrfToken();
-      const res = await fetch(`${API_BASE}/api/recipients`, {
+      const payload = {
+        ...data,
+        waitlistDate: new Date(data.waitlistDate!).toISOString(),
+      };
+      return await api("/recipients", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipients"] });
@@ -270,20 +136,15 @@ export default function Recipients() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = getAuthToken();
-      const csrf = await getCsrfToken();
-      const res = await fetch(`${API_BASE}/api/recipients/${data.id}`, {
+      const payload = {
+        ...data,
+        waitlistDate: new Date(data.waitlistDate!).toISOString(),
+      };
+      return await api(`/recipients/${data.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
-        },
-        credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipients"] });
@@ -295,18 +156,9 @@ export default function Recipients() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = getAuthToken();
-      const csrf = await getCsrfToken();
-      const res = await fetch(`${API_BASE}/api/recipients/${id}`, {
+      return await api(`/recipients/${id}`, {
         method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
-        },
-        credentials: "include",
       });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["recipients"] });
@@ -317,16 +169,22 @@ export default function Recipients() {
   const handleEdit = (recipient: UiRecipient) => {
     setEditingRecipient(recipient);
     setFormData({
-      name: recipient.name,
+      unosId: recipient.unosId || "",
+      firstName: recipient.firstName || "",
+      lastName: recipient.lastName || "",
       bloodType: recipient.bloodType,
       organNeeded: recipient.organNeeded,
-      urgencyLevel: recipient.urgencyLevel,
+      urgencyStatus: recipient.urgencyStatus,
+      waitlistDate: recipient.waitlistDate
+        ? new Date(recipient.waitlistDate).toISOString().slice(0, 16)
+        : new Date().toISOString().slice(0, 16),
+      location: recipient.location || "",
       hospital: recipient.hospital || "",
+      hospitalId: recipient.hospitalId || "",
       status: recipient.status,
     });
     setIsAddDialogOpen(true);
   };
-
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to remove this recipient from the waitlist?")) {
       deleteMutation.mutate(id);
@@ -342,13 +200,12 @@ export default function Recipients() {
   };
 
   const filteredRecipients = recipients.filter((r: UiRecipient) => {
-
     const matchesSearch =
-      r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (r.medicalId ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${r.firstName ?? ""} ${r.lastName ?? ""}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.unosId ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.hospital ?? "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === "all" || r.status === filterStatus;
-    const matchesUrgency = filterUrgency === "all" || r.urgencyLevel === filterUrgency;
+    const matchesUrgency = filterUrgency === "all" || r.urgencyStatus === filterUrgency;
     return matchesSearch && matchesStatus && matchesUrgency;
   });
 
@@ -384,9 +241,19 @@ export default function Recipients() {
 
             <div className="space-y-3">
               <Input
-                placeholder="Name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="UNOS ID"
+                value={formData.unosId}
+                onChange={(e) => setFormData({ ...formData, unosId: e.target.value })}
+              />
+              <Input
+                placeholder="First Name"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              />
+              <Input
+                placeholder="Last Name"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
               />
               <Input
                 placeholder="Blood Type"
@@ -398,24 +265,39 @@ export default function Recipients() {
                 value={formData.organNeeded}
                 onChange={(e) => setFormData({ ...formData, organNeeded: e.target.value })}
               />
+              <Select
+                value={formData.urgencyStatus}
+                onValueChange={(v) => setFormData({ ...formData, urgencyStatus: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Urgency Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="routine">Routine</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="datetime-local"
+                value={formData.waitlistDate}
+                onChange={(e) => setFormData({ ...formData, waitlistDate: e.target.value })}
+              />
+              <Input
+                placeholder="Location"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              />
               <Input
                 placeholder="Hospital"
                 value={formData.hospital}
                 onChange={(e) => setFormData({ ...formData, hospital: e.target.value })}
               />
-              <Select
-                value={formData.urgencyLevel}
-                onValueChange={(v) => setFormData({ ...formData, urgencyLevel: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Urgency Level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="critical">Critical</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="routine">Routine</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                placeholder="Hospital ID"
+                value={formData.hospitalId}
+                onChange={(e) => setFormData({ ...formData, hospitalId: e.target.value })}
+              />
               <Select
                 value={formData.status}
                 onValueChange={(v) => setFormData({ ...formData, status: v })}
@@ -424,11 +306,12 @@ export default function Recipients() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="waiting">Waiting</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="matched">Matched</SelectItem>
                 </SelectContent>
               </Select>
+
               <Button className="w-full mt-2" onClick={handleSubmit}>
                 {editingRecipient ? "Update Recipient" : "Add Recipient"}
               </Button>
@@ -448,7 +331,7 @@ export default function Recipients() {
         <CardContent>
           <div className="flex gap-2">
             <Input
-              placeholder="Search by name, medical ID, or hospital..."
+              placeholder="Search by name, UNOS ID, or hospital..."
               className="flex-1"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -459,7 +342,7 @@ export default function Recipients() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="waiting">Waiting</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
                 <SelectItem value="matched">Matched</SelectItem>
               </SelectContent>
@@ -470,85 +353,97 @@ export default function Recipients() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Urgency</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
                 <SelectItem value="routine">Routine</SelectItem>
+                <SelectItem value="urgent">Urgent</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-muted-foreground">Total Recipients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{recipients.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-muted-foreground">Critical Cases</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {recipients.filter((r: UiRecipient) => r.status === "matched").length}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredRecipients.map((recipient) => (
+          <Card key={recipient.id} className="hover-elevate">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">
+                    {recipient.firstName} {recipient.lastName}
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={
+                    recipient.urgencyStatus === "critical"
+                      ? "destructive"
+                      : recipient.urgencyStatus === "urgent"
+                      ? "secondary"
+                      : "default"
+                  }>
+                    {recipient.urgencyStatus}
+                  </Badge>
+                  <Badge variant={
+                    recipient.status === "matched"
+                      ? "secondary"
+                      : recipient.status === "inactive"
+                      ? "outline"
+                      : "default"
+                  }>
+                    {recipient.status}
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">UNOS ID</p>
+                  <p className="font-medium font-mono">{recipient.unosId ?? "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Blood Type</p>
+                  <Badge variant="outline">{recipient.bloodType}</Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Organ Needed</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <Heart className="h-3 w-3" />
+                    {recipient.organNeeded}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Wait List Date</p>
+                  <p className="font-medium">
+                    {recipient.waitlistDate
+                      ? format(new Date(recipient.waitlistDate), "MMM dd, yyyy")
+                      : "N/A"}
+                  </p>
+                </div>
+              </div>
 
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-muted-foreground">Active Waiting</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {recipients.filter((r: UiRecipient) => r.status === "matched").length}
+              <div className="flex items-center justify-between pt-2 border-t text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Location: {recipient.location ?? "Unknown"}
+                </span>
+                <span>Hospital: {recipient.hospital ?? "Unknown"}</span>
+              </div>
 
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-muted-foreground">Matched</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {recipients.filter((r: UiRecipient) => r.status === "matched").length}
-
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => handleEdit(recipient)}>
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleDelete(recipient.id)}>
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Remove
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-
-      {/* Recipients */}
-      {filteredRecipients.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <User className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium mb-1">No recipients found</p>
-            <p className="text-sm text-muted-foreground">
-              {searchTerm || filterStatus !== "all" || filterUrgency !== "all"
-                ? "Try adjusting your filters"
-                : "Add your first recipient to get started"}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRecipients.map((recipient: UiRecipient) => (
-            <RecipientCard
-              key={recipient.id}
-              recipient={recipient}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

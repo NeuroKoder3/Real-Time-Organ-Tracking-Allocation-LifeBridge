@@ -31,11 +31,8 @@ export function useAuth() {
       if (!parsed?.token) return null;
 
       try {
-        const userData = await api<User | null>("/auth/user", {
-          headers: {
-            Authorization: `Bearer ${parsed.token}`,
-          },
-        });
+        const userData = await api<User | null>("/auth/user");
+
 
         if (!userData) {
           localStorage.removeItem(STORAGE_KEY);

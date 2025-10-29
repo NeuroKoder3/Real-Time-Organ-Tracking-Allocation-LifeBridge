@@ -234,9 +234,13 @@ export default function Recipients() {
   queryKey: ["recipients"],
   queryFn: async () => {
     const data = await api<DbRecipient[]>("/recipients");
-    return data.map(mapRecipient);
+    return Array.isArray(data) ? data.map(mapRecipient) : [];
   },
+  gcTime: 0,                  // 👈 React Query v5 uses gcTime instead of cacheTime
+  staleTime: 0,
+  refetchOnWindowFocus: true,
 });
+
 
 
   const createMutation = useMutation({

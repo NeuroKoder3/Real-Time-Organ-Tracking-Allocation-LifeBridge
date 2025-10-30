@@ -36,6 +36,7 @@ import queryClient from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { Allocation, Organ, Recipient } from "@shared/schema";
+import type { InsertAllocation } from "@shared/schema"; // adjust path if needed
 
 const API_BASE = import.meta.env.VITE_API_URL ?? window.location.origin;
 
@@ -252,11 +253,14 @@ export default function Allocations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [formData, setFormData] = useState({
-    organId: "",
-    recipientId: "",
-    matchScore: 0,
-    priority: 1,
-  });
+  organId: "",
+  recipientId: "",
+  matchScore: 0,
+  priority: 1,
+  courierId: "", // optional
+  compatibilityData: {}, // optional
+});
+
 
   const fetchWithAuth = async (url: string) => {
     const token = getAuthToken();
@@ -293,30 +297,57 @@ export default function Allocations() {
   // Mutations (Create / Accept / Decline)
   // ----------------------
   const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      const token = getAuthToken();
-      const csrf = await getCsrfToken();
-      const res = await fetch(`${API_BASE}/api/allocations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(csrf ? { "X-CSRF-Token": csrf } : {}),
-        },
-        credentials: "include",
-        body: JSON.stringify({ ...data, compatibilityData: {} }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["allocations"] });
-      queryClient.invalidateQueries({ queryKey: ["organs"] });
-      toast({ title: "Allocation Created", description: "Organ match proposed successfully." });
-      setIsAddDialogOpen(false);
-      setFormData({ organId: "", recipientId: "", matchScore: 0, priority: 1 });
-    },
-  });
+  mutationFn: async (data: Partial<InsertAllocation>) => {
+    const token = getAuthToken();
+    const csrf = await getCsrfToken();
+
+    const payload = {
+      organId: data.organId!,
+      recipientId: data.recipientId!,
+      matchScore: data.matchScore!,
+      priority: data.priority!,
+      courierId: data.courierId ?? undefined,
+      compatibilityData: data.compatibilityData ?? {},
+    };
+
+    const res = await fetch(`${API_BASE}/api/allocations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(csrf ? { "X-CSRF-Token": csrf } : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["allocations"] });
+    queryClient.invalidateQueries({ queryKey: ["organs"] });
+
+    toast({
+      title: "Allocation Created",
+      description: "Organ match proposed successfully.",
+    });
+
+    setIsAddDialogOpen(false);
+
+    setFormData({
+      organId: "",
+      recipientId: "",
+      matchScore: 0,
+      priority: 1,
+      courierId: "",
+      compatibilityData: {},
+    });
+  },
+});
+
+
 
   const acceptMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -457,9 +488,18 @@ export default function Allocations() {
                   }
                 />
               </div>
-              <Button className="w-full" onClick={() => createMutation.mutate(formData)}>
-                Create Allocation
-              </Button>
+              <Button
+  className="w-full"
+  onClick={() =>
+    createMutation.mutate({
+      ...formData,
+      matchScore: formData.matchScore?.toString() ?? "0", // ✅ fix the type mismatch here
+    })
+  }
+>
+  Create Allocation
+</Button>
+
             </div>
           </DialogContent>
         </Dialog>

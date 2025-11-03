@@ -4,9 +4,8 @@ import type { Router as ExpressRouter } from "express";
 import authenticateToken, { AuthenticatedRequest } from "../authMiddleware.js";
 import { storage } from "../storage.js";
 import csurf from "csurf";
-
+import rateLimit from "express-rate-limit";
 const router: ExpressRouter = Router();
-
 // ✅ CSRF middleware
 const csrfProtection = csurf({
   cookie: {
@@ -49,7 +48,7 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
 
 
 // ✅ POST /api/organs
-router.post("/", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/", authenticateToken, organPostLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
       donorId,

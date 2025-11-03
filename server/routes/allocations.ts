@@ -1,11 +1,22 @@
 import { Router } from "express";
 import type { Router as ExpressRouter, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import authenticateToken, {
   AuthenticatedRequest,
 } from "../authMiddleware.js";
 import { storage } from "../storage.js";
 
+// Set up rate limiter: max 100 requests per 15 minutes per IP
+const allocationsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true, // Return rate limit info in the RateLimit-* headers
+  legacyHeaders: false, // Disable the X-RateLimit-* headers
+});
+
 const router: ExpressRouter = Router();
+
+router.use(allocationsLimiter);
 
 // Global CORS middleware
 router.use((req: Request, res: Response, next) => {

@@ -10,7 +10,15 @@ const router: ExpressRouter = Router();
 // CORS middleware for all requests on this router
 router.use((req: Request, res: Response, next) => {
   const origin = req.headers.origin;
-  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+  // Define a whitelist of allowed origins
+  const allowedOrigins = [
+    "https://your-frontend.com",
+    // Add other allowed origins as needed
+  ];
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  // Do not set Access-Control-Allow-Origin if origin is not trusted
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader(

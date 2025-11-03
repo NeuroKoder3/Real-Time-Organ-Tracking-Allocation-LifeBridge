@@ -1,11 +1,25 @@
 // server/routes/organs.ts
+
 import { Router, type Request, type Response, type RequestHandler } from "express";
 import type { Router as ExpressRouter } from "express";
 import authenticateToken, { AuthenticatedRequest } from "../authMiddleware.js";
 import { storage } from "../storage.js";
 import csurf from "csurf";
 import rateLimit from "express-rate-limit";
+
 const router: ExpressRouter = Router();
+
+// ✅ Rate limiter middleware for POST /api/organs
+const organPostLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 POST requests per window
+  message: {
+    message: "Too many organ submissions from this IP, please try again later.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ✅ CSRF middleware
 const csrfProtection = csurf({
   cookie: {
@@ -45,7 +59,6 @@ router.get("/", authenticateToken, async (_req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to fetch organs" });
   }
 });
-
 
 // ✅ POST /api/organs
 router.post("/", authenticateToken, organPostLimiter, async (req: AuthenticatedRequest, res: Response) => {
